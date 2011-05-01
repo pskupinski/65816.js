@@ -48,7 +48,9 @@ function CPU_65816() {
                       0x58 : CLI, 0xc2 : REP, 0xe2 : SEP, 
                       0xa9 : LDA_const, 0xad : LDA_absolute, 
                       0xa5 : LDA_direct_page, 0xbd : LDA_absolute_indexed_x,
-                      0xb9 : LDA_absolute_indexed_y, 0xa2 : LDX_const, 
+                      0xb9 : LDA_absolute_indexed_y,
+                      0xb2 : LDA_direct_page_indirect,
+                      0xa2 : LDX_const, 
                       0xae : LDX_absolute, 0xa6 : LDX_direct_page,
                       0xa0 : LDY_const, 0xbc : LDY_absolute_indexed_x,
                       0xb4 : LDY_direct_page_indexed_x,
@@ -303,6 +305,31 @@ var STZ_direct_page_indexed_x = {
       }
       cpu.mmu.store_byte(location, 0);
     }
+  }
+};
+
+var LDA_direct_page_indirect = {
+  bytes_required:function() {
+    return 2;
+  },
+  execute:function(cpu, bytes) {
+    var location = bytes[0] + cpu.r.d;
+    if(cpu.p.m===1) {
+      var low_byte_loc = cpu.mmu.read_byte(location);
+      var high_byte_loc = cpu.mmu.read_byte(location+1);
+      cpu.r.a = cpu.mmu.read_byte(high_byte_loc | low_byte_loc); 
+    } else {
+      var low_byte_loc = cpu.mmu.read_byte(location);
+      var high_byte_loc = cpu.mmu.read_byte(location+1);
+      var absolute_location = high_byte_loc | low_byte_loc;
+      var low_byte = cpu.mmu.read_byte(absolute_location);
+      var high_byte = cpu.mmu.read_byte(absolute_location+1);
+      cpu.r.a = high_byte | low_byte;
+    }
+    if(cpu.r.a===0) {
+      cpu.p.z = 1;
+    }
+    // TODO: set the n bit of the p status register
   }
 };
 
