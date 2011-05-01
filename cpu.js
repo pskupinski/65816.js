@@ -68,7 +68,8 @@ function CPU_65816() {
                       0x9c : STZ_absolute, 0x64 : STZ_direct_page,
                       0x9e : STZ_absolute_indexed_x,
                       0x74 : STZ_direct_page_indexed_x, 0x9b : TXY,
-                      0xbb : TYX };
+                      0xbb : TYX, 0xaa : TAX, 0xa8 : TAY, 0x8a : TXA, 
+                      0x98 : TYA };
 }
 
 var MMU = {
@@ -94,6 +95,101 @@ var MMU = {
         byte_buffer = [];      
       } 
     }    
+  }
+};
+
+var TYA = {
+  bytes_required:function() {
+    return 1;
+  },
+  execute:function(cpu) {
+    if(cpu.p.m===1) {
+      if(cpu.p.x===1) {
+        // 8-bit index register to 8-bit accumulator.
+        cpu.r.a = cpu.r.y;    
+      } else {
+        // 16-bit index register to 8-bit accumulator.
+        cpu.r.a = cpu.r.y & 0x00ff;     
+      }
+    } else {
+      // 8-bit index register to 16-bit accumulator. 
+      // 16-bit index register to 16-bit accumulator.
+      cpu.r.a = cpu.r.y; 
+    }  
+  }
+};
+
+var TAY = {
+  bytes_required:function() {
+    return 1;
+  },
+  execute:function(cpu) {
+    if(cpu.p.m==1) {
+      if(cpu.p.x==1) {
+        // 8-bit accumulator to 8-bit x index register.
+        cpu.r.y = cpu.r.a; 
+      } else {
+        // 8-bit accumulator to 16-bit x index register.
+        cpu.r.y = cpu.r.b;  // Transfer b as high-byte of x.
+        cpu.r.y |= cpu.r.a; // Use the bitwise or to add a as the low-byte.
+      }
+    } else {
+      if(cpu.p.x==1) {
+        // 16-bit accumulator to 8-bit x index register. 
+        cpu.r.y = cpu.r.a & 0x00ff; // Transfer only the low-byte to x.
+      } else {
+        // 16-bit accumulator to 16-bit x index register.
+        cpu.r.y = cpu.r.a;
+      }
+    }
+  }
+};
+
+
+var TXA = {
+  bytes_required:function() {
+    return 1;
+  },
+  execute:function(cpu) {
+    if(cpu.p.m===1) {
+      if(cpu.p.x===1) {
+        // 8-bit index register to 8-bit accumulator.
+        cpu.r.a = cpu.r.x;    
+      } else {
+        // 16-bit index register to 8-bit accumulator.
+        cpu.r.a = cpu.r.x & 0x00ff;     
+      }
+    } else {
+      // 8-bit index register to 16-bit accumulator. 
+      // 16-bit index register to 16-bit accumulator.
+      cpu.r.a = cpu.r.x; 
+    }  
+  }
+};
+
+var TAX = {
+  bytes_required:function() {
+    return 1;
+  },
+  execute:function(cpu) {
+    if(cpu.p.m==1) {
+      if(cpu.p.x==1) {
+        // 8-bit accumulator to 8-bit x index register.
+        cpu.r.x = cpu.r.a; 
+      } else {
+        // 8-bit accumulator to 16-bit x index register.
+        cpu.r.x = cpu.r.b;  // Transfer b as high-byte of x.
+        cpu.r.x |= cpu.r.a; // Use the bitwise or to add a as the low-byte.
+      }
+    } else {
+      if(cpu.p.x==1) {
+        // 16-bit accumulator to 8-bit x index register. 
+        cpu.r.x = cpu.r.a & 0x00ff; // Transfer only the low-byte to x.
+      } else {
+        // 16-bit accumulator to 16-bit x index register.
+        cpu.r.x = cpu.r.a;
+      }
+    }
   }
 };
 
