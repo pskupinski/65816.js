@@ -1,4 +1,7 @@
 CPU:
+- Stack operations and stack support in general
+- Subroutines
+- Comparisons and branching
 - LDY and LDX must behave properly in 8-bit mode when x bit in the p status 
   register is set to one
 - Accumulator must behave properly when in 8-bit mode
@@ -10,3 +13,6 @@ Memory:
 - Banks
 - ROM protection
 - Memory mapped I/O
+Display:
+- Using the html page included provide a nice interface for using the cpu 
+  emulator and provide many features helpful for debugging
