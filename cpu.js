@@ -320,15 +320,15 @@ var LDA_direct_page_indexed_x = {
       if(overflow_check > 0) {
         location = overflow_check-1; 
       }
-      var high_byte = cpu.mmu.read_byte(location); 
+      var low_byte = cpu.mmu.read_byte(location); 
       // Check for potential overflow again.
       if(location===0xffff) {
        location = 0;
       } else {
         location++;
       }
-      var low_byte = cpu.mmu.read_byte(location);
-      cpu.r.a = high_byte | low_byte;
+      var high_byte = cpu.mmu.read_byte(location);
+      cpu.r.a = low_byte | high_byte;
     } 
     if(cpu.r.a===0) {
       cpu.p.z = 1;
@@ -346,8 +346,8 @@ var LDA_absolute_indexed_y = {
     if(cpu.p.m===1) {
       cpu.r.a = cpu.mmu.read_byte(location);
     } else {
-      var high_byte = cpu.mmu.read_byte(location); 
-      var low_byte = cpu.mmu.read_byte(location+1);
+      var low_byte = cpu.mmu.read_byte(location); 
+      var high_byte = cpu.mmu.read_byte(location+1);
       cpu.r.a = high_byte | low_byte;
     }
     if(cpu.r.a===0) {
@@ -366,8 +366,8 @@ var LDA_absolute_indexed_x = {
     if(cpu.p.m===1) {
       cpu.r.a = cpu.mmu.read_byte(location);
     } else {
-      var high_byte = cpu.mmu.read_byte(location); 
-      var low_byte = cpu.mmu.read_byte(location+1);
+      var low_byte = cpu.mmu.read_byte(location); 
+      var high_byte = cpu.mmu.read_byte(location+1);
       cpu.r.a = high_byte | low_byte;
     }
     if(cpu.r.a===0) {
@@ -413,8 +413,8 @@ var LDY_absolute_indexed_x = {
     if(cpu.p.m===1) {
       cpu.r.y = cpu.mmu.read_byte(location);
     } else {
-      var high_byte = cpu.mmu.read_byte(location); 
-      var low_byte = cpu.mmu.read_byte(location+1);
+      var low_byte = cpu.mmu.read_byte(location); 
+      var high_byte = cpu.mmu.read_byte(location+1);
       cpu.r.y = high_byte | low_byte;
     }
     if(cpu.r.y===0) {
@@ -438,14 +438,14 @@ var LDY_direct_page_indexed_x = {
       if(overflow_check > 0) {
         location = overflow_check-1; 
       }
-      var high_byte = cpu.mmu.read_byte(location); 
+      var low_byte = cpu.mmu.read_byte(location); 
       // Check for potential overflow again.
       if(location===0xffff) {
        location = 0;
       } else {
         location++;
       }
-      var low_byte = cpu.mmu.read_byte(location);
+      var high_byte = cpu.mmu.read_byte(location);
       cpu.r.y = high_byte | low_byte;
     } 
     if(cpu.r.a===0) {
@@ -464,8 +464,8 @@ var LDY_absolute = {
     if(cpu.p.m===1) {
       cpu.r.y = cpu.mmu.read_byte(location);
     } else {
-      var high_byte = cpu.mmu.read_byte(location); 
-      var low_byte = cpu.mmu.read_byte(location+1);
+      var low_byte = cpu.mmu.read_byte(location); 
+      var high_byte = cpu.mmu.read_byte(location+1);
       cpu.r.y = high_byte | low_byte;
     }
     if(cpu.r.y===0) {
@@ -484,8 +484,8 @@ var LDY_direct_page = {
     if(cpu.p.m===1) {
       cpu.r.y = cpu.mmu.read_byte(location);
     } else {
-      var high_byte = cpu.mmu.read_byte(location); 
-      var low_byte = cpu.mmu.read_byte(location+1);
+      var low_byte = cpu.mmu.read_byte(location); 
+      var high_byte = cpu.mmu.read_byte(location+1);
       cpu.r.y = high_byte | low_byte;
     } 
     if(cpu.r.a===0) {
@@ -545,8 +545,8 @@ var INC_absolute = {
       temp = cpu.mmu.read_byte(location) + 1; 
       cpu.mmu.store_byte(location, temp);
     } else {
-      var high_byte = cpu.mmu.read_byte(location); 
-      var low_byte = cpu.mmu.read_byte(location+1);
+      var low_byte = cpu.mmu.read_byte(location); 
+      var high_byte = cpu.mmu.read_byte(location+1);
       temp = high_byte | low_byte;
       temp++;
       high_byte = temp & 0xFF00;
@@ -572,8 +572,8 @@ var INC_direct_page = {
       temp = cpu.mmu.read_byte(location) + 1; 
       cpu.mmu.store_byte(location, temp);
     } else {
-      var high_byte = cpu.mmu.read_byte(location); 
-      var low_byte = cpu.mmu.read_byte(location+1);
+      var low_byte = cpu.mmu.read_byte(location); 
+      var high_byte = cpu.mmu.read_byte(location+1);
       temp = high_byte | low_byte;
       temp++;
       high_byte = temp & 0xFF00;
@@ -817,8 +817,8 @@ var LDX_direct_page = {
     if(cpu.p.x===1) {
       cpu.r.x = cpu.mmu.read_byte(location);       
     } else {
-      var high_byte = cpu.mmu.read_byte(location); 
-      var low_byte = cpu.mmu.read_byte(location+1);
+      var low_byte = cpu.mmu.read_byte(location); 
+      var high_byte = cpu.mmu.read_byte(location+1);
       cpu.r.x = high_byte | low_byte;
     }
     if(cpu.r.x===0) {
@@ -842,14 +842,14 @@ var LDX_direct_page_indexed_y = {
       if(overflow_check > 0) {
         location = overflow_check-1; 
       }
-      var high_byte = cpu.mmu.read_byte(location); 
+      var low_byte = cpu.mmu.read_byte(location); 
       // Check for potential overflow again.
       if(location===0xffff) {
        location = 0;
       } else {
         location++;
       }
-      var low_byte = cpu.mmu.read_byte(location);
+      var high_byte = cpu.mmu.read_byte(location);
       cpu.r.x = high_byte | low_byte;
     }
     if(cpu.r.x===0) {
@@ -869,8 +869,8 @@ var LDA_direct_page = {
     if(cpu.p.m===1) {
       cpu.r.a = cpu.mmu.read_byte(location);
     } else {
-      var high_byte = cpu.mmu.read_byte(location); 
-      var low_byte = cpu.mmu.read_byte(location+1);
+      var low_byte = cpu.mmu.read_byte(location); 
+      var high_byte = cpu.mmu.read_byte(location+1);
       cpu.r.a = high_byte | low_byte;
     } 
     if(cpu.r.a===0) {
@@ -889,8 +889,8 @@ var LDX_absolute_indexed_y = {
     if(cpu.p.x===1) {
       cpu.r.x = cpu.mmu.read_byte(location);
     } else {
-      var high_byte = cpu.mmu.read_byte(location); 
-      var low_byte = cpu.mmu.read_byte(location+1);
+      var low_byte = cpu.mmu.read_byte(location); 
+      var high_byte = cpu.mmu.read_byte(location+1);
       cpu.r.a = high_byte | low_byte;
     }
     if(cpu.r.x===0) {
@@ -909,8 +909,8 @@ var LDX_absolute = {
     if(cpu.p.x===1) {
       cpu.r.x = cpu.mmu.read_byte(location);
     } else {
-      var high_byte = cpu.mmu.read_byte(location); 
-      var low_byte = cpu.mmu.read_byte(location+1);
+      var low_byte = cpu.mmu.read_byte(location); 
+      var high_byte = cpu.mmu.read_byte(location+1);
       cpu.r.a = high_byte | low_byte;
     }
     if(cpu.r.x===0) {
@@ -929,8 +929,8 @@ var LDA_absolute = {
     if(cpu.p.m===1) {
       cpu.r.a = cpu.mmu.read_byte(location);
     } else {
-      var high_byte = cpu.mmu.read_byte(location); 
-      var low_byte = cpu.mmu.read_byte(location+1);
+      var low_byte = cpu.mmu.read_byte(location); 
+      var high_byte = cpu.mmu.read_byte(location+1);
       cpu.r.a = high_byte | low_byte;
     }
     if(cpu.r.a===0) {
