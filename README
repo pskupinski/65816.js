@@ -6,10 +6,12 @@ You call the execute function of the cpu object with a raw hex string representi
 
 Short examples to try out:
 
-18fba9ff0185ff64ffa5ff
+var cpu = new CPU_65816();
+
+cpu.execute("18fba9ff0185ff64ffa5ff", false);
 
 cpu.r.a should be 0 after executing this.
 
-18fba9ff01a0010099fea5ff
+cpu.execute("18fba9ff01a0010099fea5ff", false);
 
 cpu.r.a should be 511 after executing this.
