@@ -2,6 +2,7 @@ CPU:
 - LDY and LDX must behave properly in 8-bit mode when x bit in the p status 
   register is set to one
 - Accumulator must behave properly when in 8-bit mode
+- Emulation mode support in general.
 - Have each operation return the number of cycles used by the execute function.
 - updating the n bit of the status register
 - Implement another 200+ operations
