@@ -150,8 +150,19 @@ var STZ_direct_page_indexed_x = {
     if(cpu.p.m===1) {
       cpu.mmu.store_byte(location, 0);
     } else {
+      // Check for overflow.
+      var overflow_check = location - 0xffff;
+      if(overflow_check > 0) {
+        location = overflow_check-1; 
+      }
       cpu.mmu.store_byte(location, 0);
-      cpu.mmu.store_byte(location+1, 0);
+      // Check for potential overflow again.
+      if(location===0xffff) {
+       location = 0;
+      } else {
+        location++;
+      }
+      cpu.mmu.store_byte(location, 0);
     }
   }
 };
@@ -165,8 +176,19 @@ var LDA_direct_page_indexed_x = {
     if(cpu.p.m===1) {
       cpu.r.a = cpu.mmu.read_byte(location);
     } else {
+      // Check for overflow.
+      var overflow_check = location - 0xffff;
+      if(overflow_check > 0) {
+        location = overflow_check-1; 
+      }
       var high_byte = cpu.mmu.read_byte(location); 
-      var low_byte = cpu.mmu.read_byte(location+1);
+      // Check for potential overflow again.
+      if(location===0xffff) {
+       location = 0;
+      } else {
+        location++;
+      }
+      var low_byte = cpu.mmu.read_byte(location);
       cpu.r.a = high_byte | low_byte;
     } 
     if(cpu.r.a===0) {
@@ -272,8 +294,19 @@ var LDY_direct_page_indexed_x = {
     if(cpu.p.m===1) {
       cpu.r.y = cpu.mmu.read_byte(location);
     } else {
+      // Check for overflow.
+      var overflow_check = location - 0xffff;
+      if(overflow_check > 0) {
+        location = overflow_check-1; 
+      }
       var high_byte = cpu.mmu.read_byte(location); 
-      var low_byte = cpu.mmu.read_byte(location+1);
+      // Check for potential overflow again.
+      if(location===0xffff) {
+       location = 0;
+      } else {
+        location++;
+      }
+      var low_byte = cpu.mmu.read_byte(location);
       cpu.r.y = high_byte | low_byte;
     } 
     if(cpu.r.a===0) {
@@ -427,8 +460,19 @@ var STA_direct_page_indexed_x = {
     } else {
       var high_byte = cpu.r.a & 0xFF00;
       var low_byte = cpu.r.a & 0x00FF;
+      // Check for overflow.
+      var overflow_check = location - 0xffff;
+      if(overflow_check > 0) {
+        location = overflow_check-1; 
+      }
       cpu.mmu.store_byte(location, low_byte);
-      cpu.mmu.store_byte(location+1, high_byte);
+      // Check for potential overflow again.
+      if(location===0xffff) {
+       location = 0;
+      } else {
+        location++;
+      }
+      cpu.mmu.store_byte(location, high_byte);
     }
   }
 };
@@ -495,8 +539,19 @@ var STY_direct_page_indexed_x = {
     } else {
       var high_byte = cpu.r.y & 0xFF00;
       var low_byte = cpu.r.y & 0x00FF;
+      // Check for overflow.
+      var overflow_check = location - 0xffff;
+      if(overflow_check > 0) {
+        location = overflow_check-1; 
+      }
       cpu.mmu.store_byte(location, low_byte);
-      cpu.mmu.store_byte(location+1, high_byte);
+      // Check for potential overflow again.
+      if(location===0xffff) {
+       location = 0;
+      } else {
+        location++;
+      }
+      cpu.mmu.store_byte(location, high_byte);
     }
   }
 };
@@ -546,8 +601,19 @@ var STX_direct_page_indexed_y = {
     } else {
       var high_byte = cpu.r.x & 0xFF00;
       var low_byte = cpu.r.x & 0x00FF;
+      // Check for overflow.
+      var overflow_check = location - 0xffff;
+      if(overflow_check > 0) {
+        location = overflow_check-1; 
+      }
       cpu.mmu.store_byte(location, low_byte);
-      cpu.mmu.store_byte(location+1, high_byte);
+      // Check for potential overflow again.
+      if(location===0xffff) {
+       location = 0;
+      } else {
+        location++;
+      }
+      cpu.mmu.store_byte(location, high_byte);
     }
   }
 };
@@ -632,8 +698,19 @@ var LDX_direct_page_indexed_y = {
     if(cpu.p.x===1) {
       cpu.r.x = cpu.mmu.read_byte(location);       
     } else {
+      // Check for overflow.
+      var overflow_check = location - 0xffff;
+      if(overflow_check > 0) {
+        location = overflow_check-1; 
+      }
       var high_byte = cpu.mmu.read_byte(location); 
-      var low_byte = cpu.mmu.read_byte(location+1);
+      // Check for potential overflow again.
+      if(location===0xffff) {
+       location = 0;
+      } else {
+        location++;
+      }
+      var low_byte = cpu.mmu.read_byte(location);
       cpu.r.x = high_byte | low_byte;
     }
     if(cpu.r.x===0) {
