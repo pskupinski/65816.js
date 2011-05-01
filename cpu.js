@@ -115,7 +115,11 @@ var TYA = {
       // 8-bit index register to 16-bit accumulator. 
       // 16-bit index register to 16-bit accumulator.
       cpu.r.a = cpu.r.y; 
-    }  
+    } 
+    if(cpu.r.a===0) {
+      cpu.p.z = 1;
+    }
+    // TODO: Set n bit of the p status register.
   }
 };
 
@@ -142,6 +146,10 @@ var TAY = {
         cpu.r.y = cpu.r.a;
       }
     }
+    if(cpu.r.y===0) {
+      cpu.p.z = 1;
+    }
+    // TODO: Set n bit of the p status register.
   }
 };
 
@@ -163,7 +171,11 @@ var TXA = {
       // 8-bit index register to 16-bit accumulator. 
       // 16-bit index register to 16-bit accumulator.
       cpu.r.a = cpu.r.x; 
-    }  
+    }
+    if(cpu.r.a===0) {
+      cpu.p.z = 1;
+    }
+    // TODO: Set n bit of the p status register.
   }
 };
 
@@ -190,6 +202,10 @@ var TAX = {
         cpu.r.x = cpu.r.a;
       }
     }
+    if(cpu.r.x===0) {
+      cpu.p.z = 1;
+    }
+    // TODO: Set n bit of the p status register.
   }
 };
 
@@ -199,6 +215,10 @@ var TXY = {
   },
   execute:function(cpu) {
     cpu.r.y = cpu.r.x;
+    if(cpu.r.y===0) {
+      cpu.p.z = 1;
+    }
+    // TODO: Set n bit of the p status register.
   }
 };
 
@@ -208,6 +228,10 @@ var TYX = {
   },
   execute:function(cpu) {
     cpu.r.y = cpu.r.x;
+    if(cpu.r.y===0) {
+      cpu.p.z = 1;
+    }
+    // TODO: Set n bit of the p status register.
   }
 };
 
