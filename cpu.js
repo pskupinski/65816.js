@@ -58,6 +58,7 @@ function CPU_65816() {
                       0xb6 : LDX_direct_page_indexed_y,
                       0xac : LDY_absolute, 0xa4 : LDY_direct_page, 0xea : NOP,
                       0x8d : STA_absolute, 0x85 : STA_direct_page,
+                      0x92 : STA_direct_page_indirect,
                       0x9d : STA_absolute_indexed_x, 
                       0x99 : STA_absolute_indexed_y,
                       0x95 : STA_direct_page_indexed_x, 
@@ -304,6 +305,28 @@ var STZ_direct_page_indexed_x = {
         location++;
       }
       cpu.mmu.store_byte(location, 0);
+    }
+  }
+};
+
+var STA_direct_page_indirect = {
+  bytes_required:function() {
+    return 2;
+  },
+  execute:function(cpu, bytes) {
+    var location = bytes[0] + cpu.r.d;
+    if(cpu.p.m===1) {
+      var low_byte_loc = cpu.mmu.read_byte(location);
+      var high_byte_loc = cpu.mmu.read_byte(location+1);
+      cpu.mmu.store_byte(high_byte_loc | low_byte_loc, cpu.r.a); 
+    } else {
+      var low_byte_loc = cpu.mmu.read_byte(location);
+      var high_byte_loc = cpu.mmu.read_byte(location+1);
+      var absolute_location = high_byte_loc | low_byte_loc;
+      var low_byte = cpu.r.a & 0x00FF;
+      var high_byte = cpu.r.a & 0xFF00;
+      cpu.mmu.store_byte(absolute_location, low_byte);
+      cpu.mmu.store_byte(absolute_location+1, high_byte);
     }
   }
 };
