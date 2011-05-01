@@ -67,7 +67,8 @@ function CPU_65816() {
                       0xee : INC_absolute, 0xe8 : INX, 0xc8 : INY,
                       0x9c : STZ_absolute, 0x64 : STZ_direct_page,
                       0x9e : STZ_absolute_indexed_x,
-                      0x74 : STZ_direct_page_indexed_x };
+                      0x74 : STZ_direct_page_indexed_x, 0x9b : TXY,
+                      0xbb : TYX };
 }
 
 var MMU = {
@@ -93,6 +94,24 @@ var MMU = {
         byte_buffer = [];      
       } 
     }    
+  }
+};
+
+var TXY = {
+  bytes_required:function() {
+    return 1;
+  },
+  execute:function(cpu) {
+    cpu.r.y = cpu.r.x;
+  }
+};
+
+var TYX = {
+  bytes_required:function() {
+    return 1;
+  },
+  execute:function(cpu) {
+    cpu.r.y = cpu.r.x;
   }
 };
 
