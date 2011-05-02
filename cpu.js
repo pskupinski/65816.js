@@ -107,7 +107,7 @@ var MMU = {
       byte_buffer.push(raw_hex[i]);
       if(byte_buffer.length===2) {
         this.store_byte(loc, parseInt(byte_buffer[0]+byte_buffer[1], "16")); 
-        loc += 8; 
+        loc++;
         byte_buffer = [];      
       } 
     }    
@@ -1211,11 +1211,11 @@ CPU_65816.prototype.execute = function(raw_hex, has_header) {
     } else {
       var bytes = [];
       for(var i = 1; i < bytes_required; i++) {
-          this.r.pc+=8;
+          this.r.pc++;
           bytes.push(this.mmu.read_byte(this.r.pc));
       }
       operation.execute(this,bytes);
     }
-    this.r.pc += 8;
+    this.r.pc++;
   } 
 }
