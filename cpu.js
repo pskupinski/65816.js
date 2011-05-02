@@ -74,7 +74,7 @@ function CPU_65816() {
                       0x9e : STZ_absolute_indexed_x,
                       0x74 : STZ_direct_page_indexed_x, 0x9b : TXY,
                       0xbb : TYX, 0xaa : TAX, 0xa8 : TAY, 0x8a : TXA, 
-                      0x98 : TYA };
+                      0x98 : TYA, 0x4c : JMP_absolute };
 }
 
 var MMU = {
@@ -112,6 +112,15 @@ var MMU = {
       } 
     }    
   }
+};
+
+var JMP_absolute = {
+  bytes_required:function() {
+    return 3;
+  },
+  execute:function(cpu, bytes) {
+    cpu.r.pc = (bytes[1]<<8)|bytes[0];
+  } 
 };
 
 var TYA = {
