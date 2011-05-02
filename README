@@ -8,10 +8,10 @@ Short examples to try out:
 
 var cpu = new CPU_65816();
 
-cpu.execute("18fba9ff0185ff64ffa5ff", false);
+cpu.execute("18fba9ff0185ff64ffa5ff");
 
 cpu.r.a should be 0 after executing this.
 
-cpu.execute("18fba9ff01a0010099fea5ff", false);
+cpu.execute("18fba9ff01a0010099fea5ff");
 
 cpu.r.a should be 511 after executing this.
