@@ -43,6 +43,7 @@ function CPU_65816() {
   
   this.mmu = MMU;
   this.mmu.cpu = this; 
+  var inc_pc = true;
 
   this.opcode_map = { 0xfb : XCE, 0x18 : CLC, 0x78 : SEI, 0x38 : SEC, 
                       0x58 : CLI, 0xc2 : REP, 0xe2 : SEP, 
@@ -74,7 +75,8 @@ function CPU_65816() {
                       0x9e : STZ_absolute_indexed_x,
                       0x74 : STZ_direct_page_indexed_x, 0x9b : TXY,
                       0xbb : TYX, 0xaa : TAX, 0xa8 : TAY, 0x8a : TXA, 
-                      0x98 : TYA, 0x4c : JMP_absolute };
+                      0x98 : TYA, 0x4c : JMP_absolute, 
+                      0x6c : JMP_absolute_indirect };
 }
 
 var MMU = {
@@ -111,6 +113,18 @@ var MMU = {
         byte_buffer = [];      
       } 
     }    
+  }
+};
+
+var JMP_absolute_indirect = {
+  bytes_required:function() {
+    return 3;
+  }, 
+  execute:function(cpu, bytes) {
+    var location = (bytes[1]<<8)|bytes[0];
+    var low_byte = cpu.mmu.read_byte(location);
+    var high_byte = cpu.mmu.read_byte(location+1);
+    cpu.r.pc = high_byte | low_byte;
   }
 };
 
@@ -1205,6 +1219,8 @@ CPU_65816.prototype.execute = function(raw_hex, has_header) {
   var executing = true;
   while(executing) {
     var b = this.mmu.read_byte(this.r.pc); 
+    this.r.pc++;
+
     // If we reach the end of the code then stop everything.
     if(b==null) {
       break;
@@ -1220,11 +1236,10 @@ CPU_65816.prototype.execute = function(raw_hex, has_header) {
     } else {
       var bytes = [];
       for(var i = 1; i < bytes_required; i++) {
-          this.r.pc++;
           bytes.push(this.mmu.read_byte(this.r.pc));
+          this.r.pc++;
       }
       operation.execute(this,bytes);
     }
-    this.r.pc++;
   } 
 }
