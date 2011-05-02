@@ -47,6 +47,7 @@ function CPU_65816() {
   this.opcode_map = { 0xfb : XCE, 0x18 : CLC, 0x78 : SEI, 0x38 : SEC, 
                       0x58 : CLI, 0xc2 : REP, 0xe2 : SEP, 
                       0xa9 : LDA_const, 0xad : LDA_absolute, 
+                      0xaf : LDA_absolute_long,
                       0xa5 : LDA_direct_page, 0xbd : LDA_absolute_indexed_x,
                       0xb9 : LDA_absolute_indexed_y,
                       0xb2 : LDA_direct_page_indirect,
@@ -58,6 +59,7 @@ function CPU_65816() {
                       0xb6 : LDX_direct_page_indexed_y,
                       0xac : LDY_absolute, 0xa4 : LDY_direct_page, 0xea : NOP,
                       0x8d : STA_absolute, 0x85 : STA_direct_page,
+                      0x8f : STA_absolute_long, 
                       0x92 : STA_direct_page_indirect,
                       0x9d : STA_absolute_indexed_x, 
                       0x99 : STA_absolute_indexed_y,
@@ -83,8 +85,19 @@ var MMU = {
     return this.memory[cpu.r.dbr][location];
   },
  
+  read_byte_long: function(location, bank) {
+    return this.memory[bank][location];
+  },
+ 
   store_byte: function(location, b) {
     this.memory[cpu.r.dbr][location] = b;       
+  },
+
+  store_byte_long: function(location, bank, b) {
+    if(typeof this.memory[bank] === 'undefined') {
+      this.memory[bank] = {};
+    }
+    this.memory[bank][location] = b;
   },
 
   load_rom: function(raw_hex) {
@@ -841,6 +854,23 @@ var STX_absolute = {
   }
 };
 
+var STA_absolute_long = {
+  bytes_required: function() {
+    return 4;
+  },
+  execute: function(cpu, bytes) {
+    var location = (bytes[1]<<8)|bytes[0];
+    if(cpu.p.m===1) {
+      cpu.mmu.store_byte_long(location, bytes[2], cpu.r.a);
+    } else {
+      var high_byte = cpu.r.a & 0xFF00;
+      var low_byte = cpu.r.a & 0x00FF;
+      cpu.mmu.store_byte_long(location, bytes[2], low_byte);
+      cpu.mmu.store_byte_long(location+1, bytes[2], high_byte); 
+    }
+  }
+};
+
 var STA_absolute = {
   bytes_required: function() {
     return 3;
@@ -964,6 +994,26 @@ var LDX_absolute = {
       cpu.r.a = high_byte | low_byte;
     }
     if(cpu.r.x===0) {
+      cpu.p.z = 1;
+    }
+    // TODO: Set the n status bit of the p status register.
+  }
+};
+
+var LDA_absolute_long = {
+  bytes_required: function() {
+    return 4;
+  },
+  execute: function(cpu, bytes) {
+    var location = (bytes[1]<<8)|bytes[0];
+    if(cpu.p.m===1) {
+      cpu.r.a = cpu.mmu.read_byte_long(location, bytes[2]);
+    } else {
+      var low_byte = cpu.mmu.read_byte_long(location, bytes[2]); 
+      var high_byte = cpu.mmu.read_byte_long(location+1, bytes[2]);
+      cpu.r.a = high_byte | low_byte;
+    }
+    if(cpu.r.a===0) {
       cpu.p.z = 1;
     }
     // TODO: Set the n status bit of the p status register.
