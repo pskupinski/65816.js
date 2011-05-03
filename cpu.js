@@ -76,7 +76,9 @@ function CPU_65816() {
                       0x74 : STZ_direct_page_indexed_x, 0x9b : TXY,
                       0xbb : TYX, 0xaa : TAX, 0xa8 : TAY, 0x8a : TXA, 
                       0x98 : TYA, 0x4c : JMP_absolute, 
-                      0x6c : JMP_absolute_indirect, 0x80 : BRA };
+                      0x6c : JMP_absolute_indirect, 0x80 : BRA,
+                      0xf0 : BEQ, 0xd0 : BNE, 0x90 : BCC, 0xb0 : BCS,
+                      0x50 : BVC, 0x70 : BVS };
 }
 
 var MMU = {
@@ -114,6 +116,104 @@ var MMU = {
       } 
     }    
   }
+};
+
+var BVC = {
+  bytes_required:function() {
+    return 2;
+  },
+  execute:function(cpu, bytes) {
+    if(!cpu.p.v) {
+       // Handle single byte two's complement numbers as the branch argument.
+      if(bytes[0]<=127) {
+        cpu.r.pc+=bytes[0];
+      } else {
+        cpu.r.pc-=256-bytes[0];
+      }
+    }
+  }
+};
+
+
+var BVS = {
+  bytes_required:function() {
+    return 2;
+  },
+  execute:function(cpu, bytes) {
+    if(cpu.p.v) {
+       // Handle single byte two's complement numbers as the branch argument.
+      if(bytes[0]<=127) {
+        cpu.r.pc+=bytes[0];
+      } else {
+        cpu.r.pc-=256-bytes[0];
+      }
+    }
+  }
+};
+
+var BCC = {
+  bytes_required:function() {
+    return 2;
+  },
+  execute:function(cpu, bytes) {
+    if(!cpu.p.c) {
+       // Handle single byte two's complement numbers as the branch argument.
+      if(bytes[0]<=127) {
+        cpu.r.pc+=bytes[0];
+      } else {
+        cpu.r.pc-=256-bytes[0];
+      }
+    }
+  }
+};
+
+var BCS = {
+  bytes_required:function() {
+    return 2;
+  },
+  execute:function(cpu, bytes) {
+    if(cpu.p.c) {
+       // Handle single byte two's complement numbers as the branch argument.
+      if(bytes[0]<=127) {
+        cpu.r.pc+=bytes[0];
+      } else {
+        cpu.r.pc-=256-bytes[0];
+      }
+    }
+  }
+};
+
+var BEQ = {
+  bytes_required:function() {
+    return 2;
+  },
+  execute:function(cpu, bytes) {
+    if(cpu.p.z) {
+       // Handle single byte two's complement numbers as the branch argument.
+      if(bytes[0]<=127) {
+        cpu.r.pc+=bytes[0];
+      } else {
+        cpu.r.pc-=256-bytes[0];
+      }
+    }
+  }
+};
+
+var BNE = {
+   bytes_required:function() {
+    return 2;
+  },
+  execute:function(cpu, bytes) {
+    if(!cpu.p.z) {
+       // Handle single byte two's complement numbers as the branch argument.
+      if(bytes[0]<=127) {
+        cpu.r.pc+=bytes[0];
+      } else {
+        cpu.r.pc-=256-bytes[0];
+      }
+    }
+  }
+ 
 };
 
 var BRA = {
@@ -401,6 +501,8 @@ var LDA_direct_page_indirect = {
     }
     if(cpu.r.a===0) {
       cpu.p.z = 1;
+    } else {
+      cpu.p.z = 0; 
     }
     // TODO: set the n bit of the p status register
   }
@@ -432,6 +534,8 @@ var LDA_direct_page_indexed_x = {
     } 
     if(cpu.r.a===0) {
       cpu.p.z = 1;
+    } else {
+      cpu.p.z = 0;
     }
     // TODO: Set the n status bit of the p status register.
   }
@@ -452,6 +556,8 @@ var LDA_absolute_indexed_y = {
     }
     if(cpu.r.a===0) {
       cpu.p.z = 1;
+    } else {
+      cpu.p.z = 0;
     }
     // TODO: Set the n status bit of the p status register.
   }
@@ -472,6 +578,8 @@ var LDA_absolute_indexed_x = {
     }
     if(cpu.r.a===0) {
       cpu.p.z = 1;
+    } else {
+      cpu.p.z = 0;
     }
     // TODO: Set the n status bit of the p status register.
   }
@@ -499,7 +607,9 @@ var LDY_const = {
     }
     if(cpu.r.y===0) {
       cpu.p.z = 1;
-    } 
+    } else {
+      cpu.p.z = 0;
+    }
     // TODO: set n bit in p status register
   }
 };
@@ -519,6 +629,8 @@ var LDY_absolute_indexed_x = {
     }
     if(cpu.r.y===0) {
       cpu.p.z = 1; 
+    } else {
+      cpu.p.z = 0;
     }
     // TODO: set n bit in the p status register
   }
@@ -550,6 +662,8 @@ var LDY_direct_page_indexed_x = {
     } 
     if(cpu.r.a===0) {
       cpu.p.z = 1;
+    } else {
+      cpu.p.z = 0;
     }
     // TODO: Set the n status bit of the p status register.
   }
@@ -570,6 +684,8 @@ var LDY_absolute = {
     }
     if(cpu.r.y===0) {
       cpu.p.z = 1; 
+    } else {
+      cpu.p.z = 0;
     }
     // TODO: set n bit in the p status register
   } 
@@ -590,6 +706,8 @@ var LDY_direct_page = {
     } 
     if(cpu.r.a===0) {
       cpu.p.z = 1;
+    } else {
+      cpu.p.z = 0;
     }
     // TODO: Set the n status bit of the p status register.
   }
@@ -603,6 +721,8 @@ var INX = {
     cpu.r.x++;
     if(cpu.r.x===0) {
       cpu.p.z = 1;
+    } else {
+      cpu.p.z = 0;
     }
     // TODO: set n bit of p status register
   }
@@ -616,6 +736,8 @@ var INY = {
     cpu.r.y++;
     if(cpu.r.y===0) {
       cpu.p.z = 1;
+    } else {
+      cpu.p.z = 0;
     }
     // TODO: set n bit of p status register
   }
@@ -629,6 +751,8 @@ var INC_accumulator = {
     cpu.r.a++; 
     if(cpu.r.a===0) {
       cpu.p.z = 1;
+    } else {
+      cpu.p.z = 0;
     }
     // TODO: Set n bit of the p status register.
   } 
@@ -656,6 +780,8 @@ var INC_absolute = {
     }
     if(temp===0) { 
       cpu.p.z = 1;
+    } else {
+      cpu.p.z = 0; 
     }
     // TODO: Set n bit of the p status register.
   }
@@ -683,6 +809,8 @@ var INC_direct_page = {
     }
     if(temp===0) { 
       cpu.p.z = 1;
+    } else {
+      cpu.p.z = 0;
     }
     // TODO: Set n bit of the p status register.
   }
@@ -992,6 +1120,8 @@ var LDA_direct_page = {
     } 
     if(cpu.r.a===0) {
       cpu.p.z = 1;
+    } else {
+      cpu.p.z = 0;
     }
     // TODO: Set the n status bit of the p status register.
   }
@@ -1052,6 +1182,8 @@ var LDA_absolute_long = {
     }
     if(cpu.r.a===0) {
       cpu.p.z = 1;
+    } else {
+      cpu.p.z = 0;
     }
     // TODO: Set the n status bit of the p status register.
   }
@@ -1072,6 +1204,8 @@ var LDA_absolute = {
     }
     if(cpu.r.a===0) {
       cpu.p.z = 1;
+    } else {
+      cpu.p.z = 0;
     }
     // TODO: Set the n status bit of the p status register.
   }
@@ -1093,6 +1227,8 @@ var LDA_const = {
     }
     if(cpu.r.a===0) {
       cpu.p.z = 1;      
+    } else {
+      cpu.p.z = 0;
     }
     // TODO: Set the n bit in the status register(p). 
   }
