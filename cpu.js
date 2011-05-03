@@ -78,7 +78,7 @@ function CPU_65816() {
                       0x98 : TYA, 0x4c : JMP_absolute, 
                       0x6c : JMP_absolute_indirect, 0x80 : BRA,
                       0xf0 : BEQ, 0xd0 : BNE, 0x90 : BCC, 0xb0 : BCS,
-                      0x50 : BVC, 0x70 : BVS };
+                      0x50 : BVC, 0x70 : BVS, 0x10 : BPL, 0x30 : BMI };
 }
 
 var MMU = {
@@ -115,6 +115,38 @@ var MMU = {
         byte_buffer = [];      
       } 
     }    
+  }
+};
+
+var BMI = {
+  bytes_required:function() {
+    return 2;
+  },
+  execute:function(cpu, bytes) {
+    if(cpu.p.n) {
+       // Handle single byte two's complement numbers as the branch argument.
+      if(bytes[0]<=127) {
+        cpu.r.pc+=bytes[0];
+      } else {
+        cpu.r.pc-=256-bytes[0];
+      }
+    }
+  }
+};
+
+var BPL = {
+  bytes_required:function() {
+    return 2;
+  },
+  execute:function(cpu, bytes) {
+    if(!cpu.p.n) {
+       // Handle single byte two's complement numbers as the branch argument.
+      if(bytes[0]<=127) {
+        cpu.r.pc+=bytes[0];
+      } else {
+        cpu.r.pc-=256-bytes[0];
+      }
+    }
   }
 };
 
