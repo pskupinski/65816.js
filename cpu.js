@@ -71,6 +71,8 @@ function CPU_65816() {
                       0x94 : STY_direct_page_indexed_x,
                       0x1a : INC_accumulator, 0xe6 : INC_direct_page,
                       0xee : INC_absolute, 0xe8 : INX, 0xc8 : INY,
+                      0x3a : DEC_accumulator, 0xce : DEC_absolute, 
+                      0xc6 : DEC_direct_page, 0xca : DEX, 0x88 : DEY,
                       0x9c : STZ_absolute, 0x64 : STZ_direct_page,
                       0x9e : STZ_absolute_indexed_x,
                       0x74 : STZ_direct_page_indexed_x, 0x9b : TXY,
@@ -288,8 +290,8 @@ var TYA = {
     return 1;
   },
   execute:function(cpu) {
-    if(cpu.p.m===1) {
-      if(cpu.p.x===1) {
+    if(cpu.p.m) {
+      if(cpu.p.x) {
         // 8-bit index register to 8-bit accumulator.
         cpu.r.a = cpu.r.y;    
       } else {
@@ -313,8 +315,8 @@ var TAY = {
     return 1;
   },
   execute:function(cpu) {
-    if(cpu.p.m==1) {
-      if(cpu.p.x==1) {
+    if(cpu.p.m) {
+      if(cpu.p.x) {
         // 8-bit accumulator to 8-bit x index register.
         cpu.r.y = cpu.r.a; 
       } else {
@@ -323,7 +325,7 @@ var TAY = {
         cpu.r.y |= cpu.r.a; // Use the bitwise or to add a as the low-byte.
       }
     } else {
-      if(cpu.p.x==1) {
+      if(cpu.p.x) {
         // 16-bit accumulator to 8-bit x index register. 
         cpu.r.y = cpu.r.a & 0x00ff; // Transfer only the low-byte to x.
       } else {
@@ -344,8 +346,8 @@ var TXA = {
     return 1;
   },
   execute:function(cpu) {
-    if(cpu.p.m===1) {
-      if(cpu.p.x===1) {
+    if(cpu.p.m) {
+      if(cpu.p.x) {
         // 8-bit index register to 8-bit accumulator.
         cpu.r.a = cpu.r.x;    
       } else {
@@ -369,8 +371,8 @@ var TAX = {
     return 1;
   },
   execute:function(cpu) {
-    if(cpu.p.m==1) {
-      if(cpu.p.x==1) {
+    if(cpu.p.m) {
+      if(cpu.p.x) {
         // 8-bit accumulator to 8-bit x index register.
         cpu.r.x = cpu.r.a; 
       } else {
@@ -379,7 +381,7 @@ var TAX = {
         cpu.r.x |= cpu.r.a; // Use the bitwise or to add a as the low-byte.
       }
     } else {
-      if(cpu.p.x==1) {
+      if(cpu.p.x) {
         // 16-bit accumulator to 8-bit x index register. 
         cpu.r.x = cpu.r.a & 0x00ff; // Transfer only the low-byte to x.
       } else {
@@ -426,7 +428,7 @@ var STZ_absolute = {
   },
   execute: function(cpu, bytes) {
     var location = (bytes[1]<<8)|bytes[0];
-    if(cpu.p.m===1) {
+    if(cpu.p.m) {
       cpu.mmu.store_byte(location, 0);
     } else {
       cpu.mmu.store_byte(location, 0);
@@ -441,7 +443,7 @@ var STZ_direct_page = {
   },
   execute: function(cpu, bytes) {
     var location = bytes[0]+cpu.p.d;
-    if(cpu.p.m===1) {
+    if(cpu.p.m) {
       cpu.mmu.store_byte(location, 0);
     } else {
       cpu.mmu.store_byte(location, 0);
@@ -456,7 +458,7 @@ var STZ_absolute_indexed_x = {
   },
   execute: function(cpu, bytes) {
     var location = ((bytes[1]<<8)|bytes[0])+cpu.r.x;
-    if(cpu.p.m===1) {
+    if(cpu.p.m) {
       cpu.mmu.store_byte(location, 0);
     } else {
       cpu.mmu.store_byte(location, 0);
@@ -471,7 +473,7 @@ var STZ_direct_page_indexed_x = {
   },
   execute: function(cpu, bytes) {
     var location = bytes[0]+cpu.p.d+cpu.r.x;
-    if(cpu.p.m===1) {
+    if(cpu.p.m) {
       cpu.mmu.store_byte(location, 0);
     } else {
       // Check for overflow.
@@ -497,7 +499,7 @@ var STA_direct_page_indirect = {
   },
   execute:function(cpu, bytes) {
     var location = bytes[0] + cpu.r.d;
-    if(cpu.p.m===1) {
+    if(cpu.p.m) {
       var low_byte_loc = cpu.mmu.read_byte(location);
       var high_byte_loc = cpu.mmu.read_byte(location+1);
       cpu.mmu.store_byte(high_byte_loc | low_byte_loc, cpu.r.a); 
@@ -505,8 +507,8 @@ var STA_direct_page_indirect = {
       var low_byte_loc = cpu.mmu.read_byte(location);
       var high_byte_loc = cpu.mmu.read_byte(location+1);
       var absolute_location = high_byte_loc | low_byte_loc;
-      var low_byte = cpu.r.a & 0x00FF;
-      var high_byte = cpu.r.a & 0xFF00;
+      var low_byte = cpu.r.a & 0x00ff;
+      var high_byte = cpu.r.a & 0xff00;
       cpu.mmu.store_byte(absolute_location, low_byte);
       cpu.mmu.store_byte(absolute_location+1, high_byte);
     }
@@ -519,7 +521,7 @@ var LDA_direct_page_indirect = {
   },
   execute:function(cpu, bytes) {
     var location = bytes[0] + cpu.r.d;
-    if(cpu.p.m===1) {
+    if(cpu.p.m) {
       var low_byte_loc = cpu.mmu.read_byte(location);
       var high_byte_loc = cpu.mmu.read_byte(location+1);
       cpu.r.a = cpu.mmu.read_byte(high_byte_loc | low_byte_loc); 
@@ -546,7 +548,7 @@ var LDA_direct_page_indexed_x = {
   },
   execute:function(cpu, bytes) {
     var location = bytes[0] + cpu.r.d + cpu.r.x; 
-    if(cpu.p.m===1) {
+    if(cpu.p.m) {
       cpu.r.a = cpu.mmu.read_byte(location);
     } else {
       // Check for overflow.
@@ -579,7 +581,7 @@ var LDA_absolute_indexed_y = {
   },
   execute:function(cpu, bytes) {
     var location = ((bytes[1]<<8)|bytes[0])+cpu.r.y;
-    if(cpu.p.m===1) {
+    if(cpu.p.m) {
       cpu.r.a = cpu.mmu.read_byte(location);
     } else {
       var low_byte = cpu.mmu.read_byte(location); 
@@ -601,7 +603,7 @@ var LDA_absolute_indexed_x = {
   },
   execute:function(cpu, bytes) {
     var location = ((bytes[1]<<8)|bytes[0])+cpu.r.x;
-    if(cpu.p.m===1) {
+    if(cpu.p.m) {
       cpu.r.a = cpu.mmu.read_byte(location);
     } else {
       var low_byte = cpu.mmu.read_byte(location); 
@@ -632,7 +634,7 @@ var LDY_const = {
       return 2;
   },
   execute:function(cpu, bytes) {
-    if(cpu.p.x===1) {
+    if(cpu.p.x) {
       cpu.r.y = bytes[0]; 
     } else {
       cpu.r.y = (bytes[1]<<8)|bytes[0];
@@ -652,7 +654,7 @@ var LDY_absolute_indexed_x = {
   },
   execute:function(cpu, bytes) {
     var location = ((bytes[1]<<8)|bytes[0]) + cpu.r.x;
-    if(cpu.p.m===1) {
+    if(cpu.p.x) {
       cpu.r.y = cpu.mmu.read_byte(location);
     } else {
       var low_byte = cpu.mmu.read_byte(location); 
@@ -674,7 +676,7 @@ var LDY_direct_page_indexed_x = {
   },
   execute:function(cpu, bytes) {
     var location = bytes[0] + cpu.r.d + cpu.r.x; 
-    if(cpu.p.m===1) {
+    if(cpu.p.x) {
       cpu.r.y = cpu.mmu.read_byte(location);
     } else {
       // Check for overflow.
@@ -707,7 +709,7 @@ var LDY_absolute = {
   },
   execute:function(cpu, bytes) {
     var location = (bytes[1]<<8)|bytes[0];
-    if(cpu.p.m===1) {
+    if(cpu.p.x) {
       cpu.r.y = cpu.mmu.read_byte(location);
     } else {
       var low_byte = cpu.mmu.read_byte(location); 
@@ -729,7 +731,7 @@ var LDY_direct_page = {
   },
   execute:function(cpu, bytes) {
     var location = bytes[0] + cpu.r.d; 
-    if(cpu.p.m===1) {
+    if(cpu.p.x) {
       cpu.r.y = cpu.mmu.read_byte(location);
     } else {
       var low_byte = cpu.mmu.read_byte(location); 
@@ -745,12 +747,142 @@ var LDY_direct_page = {
   }
 };
 
+var DEX = {
+  bytes_required:function() {
+    return 1;
+  },
+  execute:function(cpu) {
+    cpu.r.x--;
+    if(cpu.p.x) {
+      cpu.r.x &= 0xff;
+    } else {
+      cpu.r.x &= 0xffff;
+    }
+
+    if(cpu.r.x===0) {
+      cpu.p.z = 1;
+    } else {
+      cpu.p.z = 0;
+    }
+    // TODO: set n bit of p status register
+  }
+};
+
+var DEY = {
+  bytes_required:function() {
+    return 1;
+  },
+  execute:function(cpu) {
+    cpu.r.y--;
+
+    if(cpu.p.x) {
+      cpu.r.y &= 0xff;
+    } else {
+      cpu.r.y &= 0xffff;
+    }
+
+    if(cpu.r.y===0) {
+      cpu.p.z = 1;
+    } else {
+      cpu.p.z = 0;
+    }
+    // TODO: set n bit of p status register
+  }
+};
+
+var DEC_accumulator = {
+  bytes_required: function() {
+    return 1;
+  },
+  execute: function(cpu) {
+    cpu.r.a--; 
+
+    if(cpu.p.x) {
+      cpu.r.a &= 0xff;   
+    } else {
+      cpu.r.a &= 0xffff;
+    }
+
+    if(cpu.r.a===0) {
+      cpu.p.z = 1;
+    } else {
+      cpu.p.z = 0;
+    }
+    // TODO: Set n bit of the p status register.
+  } 
+};
+
+var DEC_absolute = {
+  bytes_required: function() {
+    return 3;
+  },
+  execute: function(cpu, bytes) {
+    var location = (bytes[1]<<8)|bytes[0]
+    var temp;
+    if(cpu.p.m) {
+      temp = cpu.mmu.read_byte(location) - 1; 
+      cpu.mmu.store_byte(location, temp);
+    } else {
+      var low_byte = cpu.mmu.read_byte(location); 
+      var high_byte = cpu.mmu.read_byte(location+1);
+      temp = high_byte | low_byte;
+      temp--;
+      high_byte = temp & 0xff00;
+      low_byte = temp & 0x00ff;
+      cpu.mmu.store_byte(location, low_byte);
+      cpu.mmu.store_byte(location+1, high_byte);
+    }
+    if((high_byte|low_byte)===0) { 
+      cpu.p.z = 1;
+    } else {
+      cpu.p.z = 0; 
+    }
+    // TODO: Set n bit of the p status register.
+  }
+};
+
+var DEC_direct_page = {
+  bytes_required: function() {
+    return 2;
+  },
+  execute: function(cpu, bytes) {
+    var location = bytes[0] + cpu.r.d;
+    var temp;
+    if(cpu.p.m) {
+      temp = cpu.mmu.read_byte(location) - 1; 
+      cpu.mmu.store_byte(location, temp);
+    } else {
+      var low_byte = cpu.mmu.read_byte(location); 
+      var high_byte = cpu.mmu.read_byte(location+1);
+      temp = high_byte | low_byte;
+      temp--;
+      high_byte = temp & 0xff00;
+      low_byte = temp & 0x00ff;
+      cpu.mmu.store_byte(location, low_byte);
+      cpu.mmu.store_byte(location+1, high_byte);
+    }
+    if((high_byte|low_byte)===0) { 
+      cpu.p.z = 1;
+    } else {
+      cpu.p.z = 0;
+    }
+    // TODO: Set n bit of the p status register.
+  }
+};
+
 var INX = {
   bytes_required:function() {
     return 1;
   },
   execute:function(cpu) {
     cpu.r.x++;
+    
+    if(cpu.p.x) {
+      cpu.r.x &= 0xff;
+    } else {
+      cpu.r.x &= 0xffff;
+    }
+
     if(cpu.r.x===0) {
       cpu.p.z = 1;
     } else {
@@ -766,6 +898,12 @@ var INY = {
   },
   execute:function(cpu) {
     cpu.r.y++;
+    if(cpu.p.x) {
+      cpu.r.y &= 0xff;
+    } else {
+      cpu.r.y &= 0xffff;
+    }
+
     if(cpu.r.y===0) {
       cpu.p.z = 1;
     } else {
@@ -781,6 +919,12 @@ var INC_accumulator = {
   },
   execute: function(cpu) {
     cpu.r.a++; 
+    if(cpu.p.m) {
+      cpu.r.a &= 0xff;
+    } else {
+      cpu.r.a &= 0xffff;
+    }
+
     if(cpu.r.a===0) {
       cpu.p.z = 1;
     } else {
@@ -797,7 +941,7 @@ var INC_absolute = {
   execute: function(cpu, bytes) {
     var location = (bytes[1]<<8)|bytes[0]
     var temp;
-    if(cpu.p.m===1) {
+    if(cpu.p.m) {
       temp = cpu.mmu.read_byte(location) + 1; 
       cpu.mmu.store_byte(location, temp);
     } else {
@@ -805,12 +949,12 @@ var INC_absolute = {
       var high_byte = cpu.mmu.read_byte(location+1);
       temp = high_byte | low_byte;
       temp++;
-      high_byte = temp & 0xFF00;
-      low_byte = temp & 0x00FF;
+      high_byte = temp & 0xff00;
+      low_byte = temp & 0x00ff;
       cpu.mmu.store_byte(location, low_byte);
       cpu.mmu.store_byte(location+1, high_byte);
     }
-    if(temp===0) { 
+    if((high_byte|low_byte)===0) { 
       cpu.p.z = 1;
     } else {
       cpu.p.z = 0; 
@@ -826,7 +970,7 @@ var INC_direct_page = {
   execute: function(cpu, bytes) {
     var location = bytes[0] + cpu.r.d;
     var temp;
-    if(cpu.p.m===1) {
+    if(cpu.p.m) {
       temp = cpu.mmu.read_byte(location) + 1; 
       cpu.mmu.store_byte(location, temp);
     } else {
@@ -834,12 +978,12 @@ var INC_direct_page = {
       var high_byte = cpu.mmu.read_byte(location+1);
       temp = high_byte | low_byte;
       temp++;
-      high_byte = temp & 0xFF00;
-      low_byte = temp & 0x00FF;
+      high_byte = temp & 0xff00;
+      low_byte = temp & 0x00ff;
       cpu.mmu.store_byte(location, low_byte);
       cpu.mmu.store_byte(location+1, high_byte);
     }
-    if(temp===0) { 
+    if((high_byte|low_byte)===0) { 
       cpu.p.z = 1;
     } else {
       cpu.p.z = 0;
@@ -854,11 +998,11 @@ var STA_direct_page_indexed_x = {
   },
   execute: function(cpu, bytes) {
     var location = bytes[0]+cpu.p.d+cpu.r.x;
-    if(cpu.p.m===1) {
+    if(cpu.p.m) {
       cpu.mmu.store_byte(location, cpu.r.a);
     } else {
-      var high_byte = cpu.r.a & 0xFF00;
-      var low_byte = cpu.r.a & 0x00FF;
+      var high_byte = cpu.r.a & 0xff00;
+      var low_byte = cpu.r.a & 0x00ff;
       // Check for overflow.
       var overflow_check = location - 0xffff;
       if(overflow_check > 0) {
@@ -882,11 +1026,11 @@ var STA_direct_page = {
   },
   execute: function(cpu, bytes) {
     var location = bytes[0]+cpu.p.d;
-    if(cpu.p.m===1) {
+    if(cpu.p.m) {
       cpu.mmu.store_byte(location, cpu.r.a);
     } else {
-      var high_byte = cpu.r.a & 0xFF00;
-      var low_byte = cpu.r.a & 0x00FF;
+      var high_byte = cpu.r.a & 0xff00;
+      var low_byte = cpu.r.a & 0x00ff;
       cpu.mmu.store_byte(location, low_byte);
       cpu.mmu.store_byte(location+1, high_byte);
     }
@@ -899,11 +1043,11 @@ var STA_absolute_indexed_x = {
   },
   execute: function(cpu, bytes) {
     var location = ((bytes[1]<<8)|bytes[0])+cpu.r.x;
-    if(cpu.p.m===1) {
+    if(cpu.p.m) {
       cpu.mmu.store_byte(location, cpu.r.a);
     } else {
-      var high_byte = cpu.r.a & 0xFF00;
-      var low_byte = cpu.r.a & 0x00FF;
+      var high_byte = cpu.r.a & 0xff00;
+      var low_byte = cpu.r.a & 0x00ff;
       cpu.mmu.store_byte(location, low_byte);
       cpu.mmu.store_byte(location+1, high_byte); 
     } 
@@ -916,11 +1060,11 @@ var STA_absolute_indexed_y = {
   },
   execute: function(cpu, bytes) {
     var location = ((bytes[1]<<8)|bytes[0])+cpu.r.y;
-    if(cpu.p.m===1) {
+    if(cpu.p.m) {
       cpu.mmu.store_byte(location, cpu.r.a);
     } else {
-      var high_byte = cpu.r.a & 0xFF00;
-      var low_byte = cpu.r.a & 0x00FF;
+      var high_byte = cpu.r.a & 0xff00;
+      var low_byte = cpu.r.a & 0x00ff;
       cpu.mmu.store_byte(location, low_byte);
       cpu.mmu.store_byte(location+1, high_byte); 
     } 
@@ -933,11 +1077,11 @@ var STY_direct_page_indexed_x = {
   },
   execute: function(cpu, bytes) {
     var location = bytes[0]+cpu.p.d+cpu.r.x;
-    if(cpu.p.x===1) {
+    if(cpu.p.x) {
       cpu.mmu.store_byte(location, cpu.r.y);
     } else {
-      var high_byte = cpu.r.y & 0xFF00;
-      var low_byte = cpu.r.y & 0x00FF;
+      var high_byte = cpu.r.y & 0xff00;
+      var low_byte = cpu.r.y & 0x00ff;
       // Check for overflow.
       var overflow_check = location - 0xffff;
       if(overflow_check > 0) {
@@ -961,11 +1105,11 @@ var STY_direct_page = {
   },
   execute: function(cpu, bytes) {
     var location = bytes[0]+cpu.p.d;
-    if(cpu.p.x===1) {
+    if(cpu.p.x) {
       cpu.mmu.store_byte(location, cpu.r.y);
     } else {
-      var high_byte = cpu.r.y & 0xFF00;
-      var low_byte = cpu.r.y & 0x00FF;
+      var high_byte = cpu.r.y & 0xff00;
+      var low_byte = cpu.r.y & 0x00ff;
       cpu.mmu.store_byte(location, low_byte);
       cpu.mmu.store_byte(location+1, high_byte);
     }
@@ -978,11 +1122,11 @@ var STY_absolute = {
   },
   execute: function(cpu, bytes) {
     var location = (bytes[1]<<8)|bytes[0];
-    if(cpu.p.x===1) {
+    if(cpu.p.x) {
       cpu.mmu.store_byte(location, cpu.r.y);
     } else {
-      var high_byte = cpu.r.y & 0xFF00;
-      var low_byte = cpu.r.y & 0x00FF;
+      var high_byte = cpu.r.y & 0xff00;
+      var low_byte = cpu.r.y & 0x00ff;
       cpu.mmu.store_byte(location, low_byte);
       cpu.mmu.store_byte(location+1, high_byte); 
     } 
@@ -998,8 +1142,8 @@ var STX_direct_page_indexed_y = {
     if(cpu.p.x===1) {
       cpu.mmu.store_byte(location, cpu.r.x);
     } else {
-      var high_byte = cpu.r.x & 0xFF00;
-      var low_byte = cpu.r.x & 0x00FF;
+      var high_byte = cpu.r.x & 0xff00;
+      var low_byte = cpu.r.x & 0x00ff;
       // Check for overflow.
       var overflow_check = location - 0xffff;
       if(overflow_check > 0) {
@@ -1023,11 +1167,11 @@ var STX_direct_page = {
   },
   execute: function(cpu, bytes) {
     var location = bytes[0]+cpu.p.d;
-    if(cpu.p.x===1) {
+    if(cpu.p.x) {
       cpu.mmu.store_byte(location, cpu.r.x);
     } else {
-      var high_byte = cpu.r.x & 0xFF00;
-      var low_byte = cpu.r.x & 0x00FF;
+      var high_byte = cpu.r.x & 0xff00;
+      var low_byte = cpu.r.x & 0x00ff;
       cpu.mmu.store_byte(location, low_byte);
       cpu.mmu.store_byte(location+1, high_byte);
     }
@@ -1040,11 +1184,11 @@ var STX_absolute = {
   },
   execute: function(cpu, bytes) {
     var location = (bytes[1]<<8)|bytes[0];
-    if(cpu.p.x===1) {
+    if(cpu.p.x) {
       cpu.mmu.store_byte(location, cpu.r.x);
     } else {
-      var high_byte = cpu.r.x & 0xFF00;
-      var low_byte = cpu.r.x & 0x00FF;
+      var high_byte = cpu.r.x & 0xff00;
+      var low_byte = cpu.r.x & 0x00ff;
       cpu.mmu.store_byte(location, low_byte);
       cpu.mmu.store_byte(location+1, high_byte); 
     } 
@@ -1057,11 +1201,11 @@ var STA_absolute_long = {
   },
   execute: function(cpu, bytes) {
     var location = (bytes[1]<<8)|bytes[0];
-    if(cpu.p.m===1) {
+    if(cpu.p.m) {
       cpu.mmu.store_byte_long(location, bytes[2], cpu.r.a);
     } else {
-      var high_byte = cpu.r.a & 0xFF00;
-      var low_byte = cpu.r.a & 0x00FF;
+      var high_byte = cpu.r.a & 0xff00;
+      var low_byte = cpu.r.a & 0x00ff;
       cpu.mmu.store_byte_long(location, bytes[2], low_byte);
       cpu.mmu.store_byte_long(location+1, bytes[2], high_byte); 
     }
@@ -1074,11 +1218,11 @@ var STA_absolute = {
   },
   execute: function(cpu, bytes) {
     var location = (bytes[1]<<8)|bytes[0];
-    if(cpu.p.m===1) {
+    if(cpu.p.m) {
       cpu.mmu.store_byte(location, cpu.r.a);
     } else {
-      var high_byte = cpu.r.a & 0xFF00;
-      var low_byte = cpu.r.a & 0x00FF;
+      var high_byte = cpu.r.a & 0xff00;
+      var low_byte = cpu.r.a & 0x00ff;
       cpu.mmu.store_byte(location, low_byte);
       cpu.mmu.store_byte(location+1, high_byte); 
     } 
@@ -1091,7 +1235,7 @@ var LDX_direct_page = {
   },
   execute: function(cpu, bytes) {
     var location = cpu.r.d + bytes[0];
-    if(cpu.p.x===1) {
+    if(cpu.p.x) {
       cpu.r.x = cpu.mmu.read_byte(location);       
     } else {
       var low_byte = cpu.mmu.read_byte(location); 
@@ -1111,7 +1255,7 @@ var LDX_direct_page_indexed_y = {
   },
   execute: function(cpu, bytes) {
     var location = cpu.r.d + bytes[0] + cpu.r.y;
-    if(cpu.p.x===1) {
+    if(cpu.p.x) {
       cpu.r.x = cpu.mmu.read_byte(location);       
     } else {
       // Check for overflow.
@@ -1143,7 +1287,7 @@ var LDA_direct_page = {
   },
   execute: function(cpu, bytes) {
     var location = bytes[0] + cpu.r.d; 
-    if(cpu.p.m===1) {
+    if(cpu.p.m) {
       cpu.r.a = cpu.mmu.read_byte(location);
     } else {
       var low_byte = cpu.mmu.read_byte(location); 
@@ -1165,7 +1309,7 @@ var LDX_absolute_indexed_y = {
   },
   execute: function(cpu, bytes) {
     var location = ((bytes[1]<<8)|bytes[0])+cpu.r.y;
-    if(cpu.p.x===1) {
+    if(cpu.p.x) {
       cpu.r.x = cpu.mmu.read_byte(location);
     } else {
       var low_byte = cpu.mmu.read_byte(location); 
@@ -1185,7 +1329,7 @@ var LDX_absolute = {
   },
   execute: function(cpu, bytes) {
     var location = (bytes[1]<<8)|bytes[0];
-    if(cpu.p.x===1) {
+    if(cpu.p.x) {
       cpu.r.x = cpu.mmu.read_byte(location);
     } else {
       var low_byte = cpu.mmu.read_byte(location); 
@@ -1205,7 +1349,7 @@ var LDA_absolute_long = {
   },
   execute: function(cpu, bytes) {
     var location = (bytes[1]<<8)|bytes[0];
-    if(cpu.p.m===1) {
+    if(cpu.p.m) {
       cpu.r.a = cpu.mmu.read_byte_long(location, bytes[2]);
     } else {
       var low_byte = cpu.mmu.read_byte_long(location, bytes[2]); 
@@ -1346,10 +1490,10 @@ var XCE = {
     var temp = cpu.p.c; 
     cpu.p.c = cpu.p.e;
     cpu.p.e = temp;        
-    if(cpu.p.e===1) {
+    if(cpu.p.e) {
       // Switching to emulation mode.
-      var high_byte = cpu.r.a & 0xFF00;
-      var low_byte = cpu.r.a & 0x00FF;
+      var high_byte = cpu.r.a & 0xff00;
+      var low_byte = cpu.r.a & 0x00ff;
       cpu.r.a = low_byte;
       cpu.r.b = high_byte;
     } else {
