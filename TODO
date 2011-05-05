@@ -1,4 +1,6 @@
 CPU:
+- Decrementing 0 with the DEC/DEY/DEX operations should result in 0xff(8-bit)
+  or 0xffff(16-bit).
 - Stack operations and stack support in general
 - Subroutines
 - Comparisons and branching
