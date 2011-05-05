@@ -6,18 +6,18 @@ Short examples to try out:
 
 var cpu = new CPU_65816();
 
-cpu.execute("18fba9ff0185ff64ffa5ff");
+cpu.execute("18fbc230a9ff0185ff64ffa5ff");
 
 cpu.r.a should be 0 after executing this.
 
-cpu.execute("18fba9ff01a0010099fea5ff");
+cpu.execute("18fbc230a9ff01a0010099fea5ff");
 
 cpu.r.a should be 511 after executing this.
 
-cpu.execute("18fba900001ad0fd")
+cpu.execute("18fbc230a900001ad0fd")
 
 This will loop until 0 is incremented past 0xffff and overflows back to 0.
 
-cpu.execute("18fba9ffff3a30fd")
+cpu.execute("18fbc230a9ffff3a30fd")
 
 This will loop until 0xffff is decremented to 0x7fff and then stops.
