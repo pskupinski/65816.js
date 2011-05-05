@@ -7,8 +7,7 @@ CPU:
 - Accumulator must behave properly when in 8-bit mode
 - Emulation mode support in general.
 - Have each operation return the number of cycles used by the execute function.
-- updating the n bit of the status register
-- Implement another 200+ operations
+- Implement the rest of the missing operations.
 Memory:
 - Banks
 - ROM protection

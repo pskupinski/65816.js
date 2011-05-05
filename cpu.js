@@ -298,15 +298,18 @@ var TYA = {
         // 16-bit index register to 8-bit accumulator.
         cpu.r.a = cpu.r.y & 0x00ff;     
       }
+      cpu.p.n = cpu.r.a >> 7;
     } else {
       // 8-bit index register to 16-bit accumulator. 
       // 16-bit index register to 16-bit accumulator.
-      cpu.r.a = cpu.r.y; 
+      cpu.r.a = cpu.r.y;
+      cpu.p.n = cpu.r.a >> 15; 
     } 
     if(cpu.r.a===0) {
       cpu.p.z = 1;
+    } else {
+      cpu.p.z = 0;
     }
-    // TODO: Set n bit of the p status register.
   }
 };
 
@@ -319,24 +322,29 @@ var TAY = {
       if(cpu.p.x) {
         // 8-bit accumulator to 8-bit x index register.
         cpu.r.y = cpu.r.a; 
+        cpu.p.n = cpu.r.y >> 7;
       } else {
         // 8-bit accumulator to 16-bit x index register.
         cpu.r.y = cpu.r.b;  // Transfer b as high-byte of x.
         cpu.r.y |= cpu.r.a; // Use the bitwise or to add a as the low-byte.
+        cpu.p.n = cpu.r.y >> 15;
       }
     } else {
       if(cpu.p.x) {
         // 16-bit accumulator to 8-bit x index register. 
         cpu.r.y = cpu.r.a & 0x00ff; // Transfer only the low-byte to x.
+        cpu.p.n = cpu.r.y >> 7;
       } else {
         // 16-bit accumulator to 16-bit x index register.
         cpu.r.y = cpu.r.a;
+        cpu.p.n = cpu.r.y >> 15;
       }
     }
     if(cpu.r.y===0) {
       cpu.p.z = 1;
+    } else {
+      cpu.p.z = 0;
     }
-    // TODO: Set n bit of the p status register.
   }
 };
 
@@ -354,15 +362,18 @@ var TXA = {
         // 16-bit index register to 8-bit accumulator.
         cpu.r.a = cpu.r.x & 0x00ff;     
       }
+      cpu.p.n = cpu.r.a >> 7;
     } else {
       // 8-bit index register to 16-bit accumulator. 
       // 16-bit index register to 16-bit accumulator.
       cpu.r.a = cpu.r.x; 
+      cpu.p.n = cpu.r.a >> 15; 
     }
     if(cpu.r.a===0) {
       cpu.p.z = 1;
+    } else {
+      cpu.p.z = 0;
     }
-    // TODO: Set n bit of the p status register.
   }
 };
 
@@ -375,24 +386,29 @@ var TAX = {
       if(cpu.p.x) {
         // 8-bit accumulator to 8-bit x index register.
         cpu.r.x = cpu.r.a; 
+        cpu.p.n = cpu.r.x >> 7;
       } else {
         // 8-bit accumulator to 16-bit x index register.
         cpu.r.x = cpu.r.b;  // Transfer b as high-byte of x.
         cpu.r.x |= cpu.r.a; // Use the bitwise or to add a as the low-byte.
+        cpu.p.n = cpu.r.x >> 15;
       }
     } else {
       if(cpu.p.x) {
         // 16-bit accumulator to 8-bit x index register. 
         cpu.r.x = cpu.r.a & 0x00ff; // Transfer only the low-byte to x.
+        cpu.p.n = cpu.r.x >> 7;
       } else {
         // 16-bit accumulator to 16-bit x index register.
         cpu.r.x = cpu.r.a;
+        cpu.p.n = cpu.r.x >> 15;
       }
     }
     if(cpu.r.x===0) {
       cpu.p.z = 1;
+    } else {
+      cpu.p.z = 0;
     }
-    // TODO: Set n bit of the p status register.
   }
 };
 
@@ -404,8 +420,15 @@ var TXY = {
     cpu.r.y = cpu.r.x;
     if(cpu.r.y===0) {
       cpu.p.z = 1;
+    } else {
+      cpu.p.z = 0;
     }
-    // TODO: Set n bit of the p status register.
+
+    if(cpu.p.x) {
+      cpu.p.n = cpu.r.y >> 7;
+    } else {
+      cpu.p.n = cpu.r.y >> 15;
+    }
   }
 };
 
@@ -414,11 +437,18 @@ var TYX = {
     return 1;
   },
   execute:function(cpu) {
-    cpu.r.y = cpu.r.x;
-    if(cpu.r.y===0) {
+    cpu.r.x = cpu.r.y;
+    if(cpu.r.x===0) {
       cpu.p.z = 1;
+    } else {
+      cpu.p.z = 0;
     }
-    // TODO: Set n bit of the p status register.
+    
+    if(cpu.p.x) {
+      cpu.p.n = cpu.r.y >> 7;
+    } else {
+      cpu.p.n = cpu.r.y >> 15;
+    }
   }
 };
 
@@ -525,6 +555,7 @@ var LDA_direct_page_indirect = {
       var low_byte_loc = cpu.mmu.read_byte(location);
       var high_byte_loc = cpu.mmu.read_byte(location+1);
       cpu.r.a = cpu.mmu.read_byte(high_byte_loc | low_byte_loc); 
+      cpu.p.n = cpu.r.a >> 7;
     } else {
       var low_byte_loc = cpu.mmu.read_byte(location);
       var high_byte_loc = cpu.mmu.read_byte(location+1);
@@ -532,13 +563,13 @@ var LDA_direct_page_indirect = {
       var low_byte = cpu.mmu.read_byte(absolute_location);
       var high_byte = cpu.mmu.read_byte(absolute_location+1);
       cpu.r.a = high_byte | low_byte;
+      cpu.p.n = cpu.r.a >> 15;
     }
     if(cpu.r.a===0) {
       cpu.p.z = 1;
     } else {
       cpu.p.z = 0; 
     }
-    // TODO: set the n bit of the p status register
   }
 };
 
@@ -550,6 +581,7 @@ var LDA_direct_page_indexed_x = {
     var location = bytes[0] + cpu.r.d + cpu.r.x; 
     if(cpu.p.m) {
       cpu.r.a = cpu.mmu.read_byte(location);
+      cpu.p.n = cpu.r.a >> 7;
     } else {
       // Check for overflow.
       var overflow_check = location - 0xffff;
@@ -565,13 +597,13 @@ var LDA_direct_page_indexed_x = {
       }
       var high_byte = cpu.mmu.read_byte(location);
       cpu.r.a = low_byte | high_byte;
+      cpu.p.n = cpu.r.a >> 15;
     } 
     if(cpu.r.a===0) {
       cpu.p.z = 1;
     } else {
       cpu.p.z = 0;
     }
-    // TODO: Set the n status bit of the p status register.
   }
 };
 
@@ -583,17 +615,18 @@ var LDA_absolute_indexed_y = {
     var location = ((bytes[1]<<8)|bytes[0])+cpu.r.y;
     if(cpu.p.m) {
       cpu.r.a = cpu.mmu.read_byte(location);
+      cpu.p.n = cpu.r.a >> 7;
     } else {
       var low_byte = cpu.mmu.read_byte(location); 
       var high_byte = cpu.mmu.read_byte(location+1);
       cpu.r.a = high_byte | low_byte;
+      cpu.p.n = cpu.r.a >> 15;
     }
     if(cpu.r.a===0) {
       cpu.p.z = 1;
     } else {
       cpu.p.z = 0;
     }
-    // TODO: Set the n status bit of the p status register.
   }
 };
 
@@ -605,17 +638,18 @@ var LDA_absolute_indexed_x = {
     var location = ((bytes[1]<<8)|bytes[0])+cpu.r.x;
     if(cpu.p.m) {
       cpu.r.a = cpu.mmu.read_byte(location);
+      cpu.p.n = cpu.r.a >> 7;
     } else {
       var low_byte = cpu.mmu.read_byte(location); 
       var high_byte = cpu.mmu.read_byte(location+1);
       cpu.r.a = high_byte | low_byte;
+      cpu.p.n = cpu.r.a >> 15;
     }
     if(cpu.r.a===0) {
       cpu.p.z = 1;
     } else {
       cpu.p.z = 0;
     }
-    // TODO: Set the n status bit of the p status register.
   }
 };
 
@@ -636,15 +670,16 @@ var LDY_const = {
   execute:function(cpu, bytes) {
     if(cpu.p.x) {
       cpu.r.y = bytes[0]; 
+      cpu.p.n = cpu.r.y >> 7;
     } else {
       cpu.r.y = (bytes[1]<<8)|bytes[0];
+      cpu.p.n = cpu.r.y >> 15;
     }
     if(cpu.r.y===0) {
       cpu.p.z = 1;
     } else {
       cpu.p.z = 0;
     }
-    // TODO: set n bit in p status register
   }
 };
 
@@ -656,17 +691,18 @@ var LDY_absolute_indexed_x = {
     var location = ((bytes[1]<<8)|bytes[0]) + cpu.r.x;
     if(cpu.p.x) {
       cpu.r.y = cpu.mmu.read_byte(location);
+      cpu.p.n = cpu.r.y >> 7;
     } else {
       var low_byte = cpu.mmu.read_byte(location); 
       var high_byte = cpu.mmu.read_byte(location+1);
       cpu.r.y = high_byte | low_byte;
+      cpu.p.n = cpu.r.y >> 15;
     }
     if(cpu.r.y===0) {
       cpu.p.z = 1; 
     } else {
       cpu.p.z = 0;
     }
-    // TODO: set n bit in the p status register
   }
 };
 
@@ -678,6 +714,7 @@ var LDY_direct_page_indexed_x = {
     var location = bytes[0] + cpu.r.d + cpu.r.x; 
     if(cpu.p.x) {
       cpu.r.y = cpu.mmu.read_byte(location);
+      cpu.p.n = cpu.r.y >> 7;
     } else {
       // Check for overflow.
       var overflow_check = location - 0xffff;
@@ -693,13 +730,13 @@ var LDY_direct_page_indexed_x = {
       }
       var high_byte = cpu.mmu.read_byte(location);
       cpu.r.y = high_byte | low_byte;
+      cpu.p.n = cpu.r.y >> 15;
     } 
     if(cpu.r.a===0) {
       cpu.p.z = 1;
     } else {
       cpu.p.z = 0;
     }
-    // TODO: Set the n status bit of the p status register.
   }
 }
 
@@ -711,17 +748,18 @@ var LDY_absolute = {
     var location = (bytes[1]<<8)|bytes[0];
     if(cpu.p.x) {
       cpu.r.y = cpu.mmu.read_byte(location);
+      cpu.p.n = cpu.r.y >> 7;
     } else {
       var low_byte = cpu.mmu.read_byte(location); 
       var high_byte = cpu.mmu.read_byte(location+1);
       cpu.r.y = high_byte | low_byte;
+      cpu.p.n = cpu.r.y >> 15;
     }
     if(cpu.r.y===0) {
       cpu.p.z = 1; 
     } else {
       cpu.p.z = 0;
     }
-    // TODO: set n bit in the p status register
   } 
 };
 
@@ -733,17 +771,18 @@ var LDY_direct_page = {
     var location = bytes[0] + cpu.r.d; 
     if(cpu.p.x) {
       cpu.r.y = cpu.mmu.read_byte(location);
+      cpu.p.n = cpu.r.y >> 7;
     } else {
       var low_byte = cpu.mmu.read_byte(location); 
       var high_byte = cpu.mmu.read_byte(location+1);
       cpu.r.y = high_byte | low_byte;
+      cpu.p.n = cpu.r.y >> 15;
     } 
-    if(cpu.r.a===0) {
+    if(cpu.r.y===0) {
       cpu.p.z = 1;
     } else {
       cpu.p.z = 0;
     }
-    // TODO: Set the n status bit of the p status register.
   }
 };
 
@@ -755,8 +794,10 @@ var DEX = {
     cpu.r.x--;
     if(cpu.p.x) {
       cpu.r.x &= 0xff;
+      cpu.p.n = cpu.r.x >> 7;
     } else {
       cpu.r.x &= 0xffff;
+      cpu.p.n = cpu.r.x >> 15;
     }
 
     if(cpu.r.x===0) {
@@ -764,7 +805,6 @@ var DEX = {
     } else {
       cpu.p.z = 0;
     }
-    // TODO: set n bit of p status register
   }
 };
 
@@ -777,8 +817,10 @@ var DEY = {
 
     if(cpu.p.x) {
       cpu.r.y &= 0xff;
+      cpu.p.n = cpu.r.y >> 7;
     } else {
       cpu.r.y &= 0xffff;
+      cpu.p.n = cpu.r.y >> 15;
     }
 
     if(cpu.r.y===0) {
@@ -786,7 +828,6 @@ var DEY = {
     } else {
       cpu.p.z = 0;
     }
-    // TODO: set n bit of p status register
   }
 };
 
@@ -799,8 +840,10 @@ var DEC_accumulator = {
 
     if(cpu.p.x) {
       cpu.r.a &= 0xff;   
+      cpu.p.n = cpu.r.a >> 7;
     } else {
       cpu.r.a &= 0xffff;
+      cpu.p.n = cpu.r.a >> 15;
     }
 
     if(cpu.r.a===0) {
@@ -808,7 +851,6 @@ var DEC_accumulator = {
     } else {
       cpu.p.z = 0;
     }
-    // TODO: Set n bit of the p status register.
   } 
 };
 
@@ -822,11 +864,13 @@ var DEC_absolute = {
     if(cpu.p.m) {
       temp = cpu.mmu.read_byte(location) - 1; 
       cpu.mmu.store_byte(location, temp);
+      cpu.p.n = temp >> 7;
     } else {
       var low_byte = cpu.mmu.read_byte(location); 
       var high_byte = cpu.mmu.read_byte(location+1);
       temp = high_byte | low_byte;
       temp--;
+      cpu.p.n = temp >> 15;
       high_byte = temp & 0xff00;
       low_byte = temp & 0x00ff;
       cpu.mmu.store_byte(location, low_byte);
@@ -837,7 +881,6 @@ var DEC_absolute = {
     } else {
       cpu.p.z = 0; 
     }
-    // TODO: Set n bit of the p status register.
   }
 };
 
@@ -851,11 +894,13 @@ var DEC_direct_page = {
     if(cpu.p.m) {
       temp = cpu.mmu.read_byte(location) - 1; 
       cpu.mmu.store_byte(location, temp);
+      cpu.p.n = temp >> 7;
     } else {
       var low_byte = cpu.mmu.read_byte(location); 
       var high_byte = cpu.mmu.read_byte(location+1);
       temp = high_byte | low_byte;
       temp--;
+      cpu.p.n = temp >> 15;
       high_byte = temp & 0xff00;
       low_byte = temp & 0x00ff;
       cpu.mmu.store_byte(location, low_byte);
@@ -866,7 +911,6 @@ var DEC_direct_page = {
     } else {
       cpu.p.z = 0;
     }
-    // TODO: Set n bit of the p status register.
   }
 };
 
@@ -879,8 +923,10 @@ var INX = {
     
     if(cpu.p.x) {
       cpu.r.x &= 0xff;
+      cpu.p.n = cpu.r.x >> 7;
     } else {
       cpu.r.x &= 0xffff;
+      cpu.p.n = cpu.r.x >> 15;
     }
 
     if(cpu.r.x===0) {
@@ -888,7 +934,6 @@ var INX = {
     } else {
       cpu.p.z = 0;
     }
-    // TODO: set n bit of p status register
   }
 };
 
@@ -900,8 +945,10 @@ var INY = {
     cpu.r.y++;
     if(cpu.p.x) {
       cpu.r.y &= 0xff;
+      cpu.p.n = cpu.r.y >> 7;
     } else {
       cpu.r.y &= 0xffff;
+      cpu.p.n = cpu.r.y >> 15;
     }
 
     if(cpu.r.y===0) {
@@ -909,7 +956,6 @@ var INY = {
     } else {
       cpu.p.z = 0;
     }
-    // TODO: set n bit of p status register
   }
 };
 
@@ -921,8 +967,10 @@ var INC_accumulator = {
     cpu.r.a++; 
     if(cpu.p.m) {
       cpu.r.a &= 0xff;
+      cpu.p.n = cpu.r.a >> 7;
     } else {
       cpu.r.a &= 0xffff;
+      cpu.p.n = cpu.r.a >> 15;
     }
 
     if(cpu.r.a===0) {
@@ -930,7 +978,6 @@ var INC_accumulator = {
     } else {
       cpu.p.z = 0;
     }
-    // TODO: Set n bit of the p status register.
   } 
 };
 
@@ -943,12 +990,14 @@ var INC_absolute = {
     var temp;
     if(cpu.p.m) {
       temp = cpu.mmu.read_byte(location) + 1; 
+      cpu.p.n = temp >> 7;
       cpu.mmu.store_byte(location, temp);
     } else {
       var low_byte = cpu.mmu.read_byte(location); 
       var high_byte = cpu.mmu.read_byte(location+1);
       temp = high_byte | low_byte;
       temp++;
+      cpu.p.n = temp >> 15;
       high_byte = temp & 0xff00;
       low_byte = temp & 0x00ff;
       cpu.mmu.store_byte(location, low_byte);
@@ -959,7 +1008,6 @@ var INC_absolute = {
     } else {
       cpu.p.z = 0; 
     }
-    // TODO: Set n bit of the p status register.
   }
 };
 
@@ -973,11 +1021,13 @@ var INC_direct_page = {
     if(cpu.p.m) {
       temp = cpu.mmu.read_byte(location) + 1; 
       cpu.mmu.store_byte(location, temp);
+      cpu.p.n = temp >> 7;
     } else {
       var low_byte = cpu.mmu.read_byte(location); 
       var high_byte = cpu.mmu.read_byte(location+1);
       temp = high_byte | low_byte;
       temp++;
+      cpu.p.n = temp >> 15;
       high_byte = temp & 0xff00;
       low_byte = temp & 0x00ff;
       cpu.mmu.store_byte(location, low_byte);
@@ -988,7 +1038,6 @@ var INC_direct_page = {
     } else {
       cpu.p.z = 0;
     }
-    // TODO: Set n bit of the p status register.
   }
 };
 
@@ -1236,16 +1285,19 @@ var LDX_direct_page = {
   execute: function(cpu, bytes) {
     var location = cpu.r.d + bytes[0];
     if(cpu.p.x) {
-      cpu.r.x = cpu.mmu.read_byte(location);       
+      cpu.r.x = cpu.mmu.read_byte(location);
+      cpu.p.n = cpu.r.x >> 7;
     } else {
       var low_byte = cpu.mmu.read_byte(location); 
       var high_byte = cpu.mmu.read_byte(location+1);
       cpu.r.x = high_byte | low_byte;
+      cpu.p.n = cpu.r.x >> 15;
     }
     if(cpu.r.x===0) {
       cpu.p.z = 1;
+    } else {
+      cpu.p.z = 0;
     }
-    // TODO: Set the n status bit of the p status register.
   }
 };
 
@@ -1257,6 +1309,7 @@ var LDX_direct_page_indexed_y = {
     var location = cpu.r.d + bytes[0] + cpu.r.y;
     if(cpu.p.x) {
       cpu.r.x = cpu.mmu.read_byte(location);       
+      cpu.p.n = cpu.r.x >> 7;
     } else {
       // Check for overflow.
       var overflow_check = location - 0xffff;
@@ -1272,11 +1325,13 @@ var LDX_direct_page_indexed_y = {
       }
       var high_byte = cpu.mmu.read_byte(location);
       cpu.r.x = high_byte | low_byte;
+      cpu.p.n = cpu.r.x >> 15;
     }
     if(cpu.r.x===0) {
       cpu.p.z = 1;
+    } else {
+      cpu.p.z = 0;
     }
-    // TODO: Set the n status bit of the p status register.
   }
 
 };
@@ -1289,17 +1344,18 @@ var LDA_direct_page = {
     var location = bytes[0] + cpu.r.d; 
     if(cpu.p.m) {
       cpu.r.a = cpu.mmu.read_byte(location);
+      cpu.p.n = cpu.r.a >> 7;
     } else {
       var low_byte = cpu.mmu.read_byte(location); 
       var high_byte = cpu.mmu.read_byte(location+1);
       cpu.r.a = high_byte | low_byte;
+      cpu.p.n = cpu.r.a >> 15;
     } 
     if(cpu.r.a===0) {
       cpu.p.z = 1;
     } else {
       cpu.p.z = 0;
     }
-    // TODO: Set the n status bit of the p status register.
   }
 };
 
@@ -1311,15 +1367,18 @@ var LDX_absolute_indexed_y = {
     var location = ((bytes[1]<<8)|bytes[0])+cpu.r.y;
     if(cpu.p.x) {
       cpu.r.x = cpu.mmu.read_byte(location);
+      cpu.p.n = cpu.r.x >> 7;
     } else {
       var low_byte = cpu.mmu.read_byte(location); 
       var high_byte = cpu.mmu.read_byte(location+1);
-      cpu.r.a = high_byte | low_byte;
+      cpu.r.x = high_byte | low_byte;
+      cpu.p.n = cpu.r.x >> 15;
     }
     if(cpu.r.x===0) {
       cpu.p.z = 1;
+    } else {
+      cpu.p.z = 0;
     }
-    // TODO: Set the n status bit of the p status register.
   }
 };
 
@@ -1331,15 +1390,18 @@ var LDX_absolute = {
     var location = (bytes[1]<<8)|bytes[0];
     if(cpu.p.x) {
       cpu.r.x = cpu.mmu.read_byte(location);
+      cpu.p.n = cpu.r.x >> 7;
     } else {
       var low_byte = cpu.mmu.read_byte(location); 
       var high_byte = cpu.mmu.read_byte(location+1);
-      cpu.r.a = high_byte | low_byte;
+      cpu.r.x = high_byte | low_byte; 
+      cpu.p.n = cpu.r.x >> 15;
     }
     if(cpu.r.x===0) {
       cpu.p.z = 1;
+    } else {
+      cpu.p.z = 0;
     }
-    // TODO: Set the n status bit of the p status register.
   }
 };
 
@@ -1351,17 +1413,18 @@ var LDA_absolute_long = {
     var location = (bytes[1]<<8)|bytes[0];
     if(cpu.p.m) {
       cpu.r.a = cpu.mmu.read_byte_long(location, bytes[2]);
+      cpu.p.n = cpu.r.a >> 7;
     } else {
       var low_byte = cpu.mmu.read_byte_long(location, bytes[2]); 
       var high_byte = cpu.mmu.read_byte_long(location+1, bytes[2]);
       cpu.r.a = high_byte | low_byte;
+      cpu.p.n = cpu.r.a >> 15;
     }
     if(cpu.r.a===0) {
       cpu.p.z = 1;
     } else {
       cpu.p.z = 0;
     }
-    // TODO: Set the n status bit of the p status register.
   }
 };
 
@@ -1373,17 +1436,18 @@ var LDA_absolute = {
     var location = (bytes[1]<<8)|bytes[0];
     if(cpu.p.m===1) {
       cpu.r.a = cpu.mmu.read_byte(location);
+      cpu.p.n = cpu.r.a >> 7;
     } else {
       var low_byte = cpu.mmu.read_byte(location); 
       var high_byte = cpu.mmu.read_byte(location+1);
       cpu.r.a = high_byte | low_byte;
+      cpu.p.n = cpu.r.a >> 15;
     }
     if(cpu.r.a===0) {
       cpu.p.z = 1;
     } else {
       cpu.p.z = 0;
     }
-    // TODO: Set the n status bit of the p status register.
   }
 };
 
@@ -1398,15 +1462,16 @@ var LDA_const = {
   execute: function(cpu, bytes) {
     if(cpu.p.m===0) {
       cpu.r.a = (bytes[1]<<8)|bytes[0];  
+      cpu.p.n = cpu.r.a >> 15;
     } else {
       cpu.r.a = bytes[0];  
+      cpu.p.n = cpu.r.a >> 7;
     }
     if(cpu.r.a===0) {
       cpu.p.z = 1;      
     } else {
       cpu.p.z = 0;
     }
-    // TODO: Set the n bit in the status register(p). 
   }
 };
 
@@ -1422,13 +1487,16 @@ var LDX_const = {
     var constant;
     if(cpu.p.x===0) {
       cpu.r.x = (bytes[1]<<8)|bytes[0];  
+      cpu.p.n = cpu.r.x >> 15;
     } else {
       cpu.r.x = bytes[0];  
+      cpu.p.n = cpu.r.x >> 7;
     }
     if(cpu.r.x===0) {
       cpu.p.z = 1; 
+    } else {
+      cpu.p.z = 0;
     }
-    // TODO: Set the n bit in the status register(p). 
   }
 };
 
