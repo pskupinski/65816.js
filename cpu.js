@@ -43,7 +43,6 @@ function CPU_65816() {
   
   this.mmu = MMU;
   this.mmu.cpu = this; 
-  var inc_pc = true;
 
   this.opcode_map = { 0xfb : XCE, 0x18 : CLC, 0x78 : SEI, 0x38 : SEC, 
                       0x58 : CLI, 0xc2 : REP, 0xe2 : SEP, 
@@ -88,7 +87,7 @@ var MMU = {
   memory: { 0: {} },
 
   read_byte: function(location) {
-    return this.memory[cpu.r.dbr][location];
+    return this.memory[this.cpu.r.dbr][location];
   },
  
   read_byte_long: function(location, bank) {
@@ -96,7 +95,7 @@ var MMU = {
   },
  
   store_byte: function(location, b) {
-    this.memory[cpu.r.dbr][location] = b;       
+    this.memory[this.cpu.r.dbr][location] = b;       
   },
 
   store_byte_long: function(location, bank, b) {
@@ -1624,7 +1623,7 @@ CPU_65816.prototype.execute = function(raw_hex, has_header) {
     if(operation==null) {
       break;
     }
-    var bytes_required = operation.bytes_required(cpu);
+    var bytes_required = operation.bytes_required(this);
     if(bytes_required===1) {
       operation.execute(this);
     } else {
