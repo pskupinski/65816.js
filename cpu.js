@@ -1513,10 +1513,10 @@ var SEP = {
       flags = '0' + flags;
     }
 
-    var ops = { 0: function() { cpu.p.c = 1; }, 1: function() { cpu.p.z = 1; },
-                2: function() { cpu.p.i = 1; }, 3: function() { cpu.p.d = 1; },
-                4: function() { cpu.p.x = 1; }, 5: function() { cpu.p.m = 1; },
-                6: function() { cpu.p.v = 1; }, 7: function() { cpu.p.n = 1; }};
+    var ops = { 0: function() { cpu.p.n = 1; }, 1: function() { cpu.p.v = 1; },
+                2: function() { cpu.p.m = 1; }, 3: function() { cpu.p.x = 1; },
+                4: function() { cpu.p.d = 1; }, 5: function() { cpu.p.i = 1; },
+                6: function() { cpu.p.z = 1; }, 7: function() { cpu.p.c = 1; }};
 
     for(var i = 0; i < 8; i++) {
       if(flags[i]==='1') {
@@ -1539,10 +1539,10 @@ var REP = {
       flags = '0' + flags;
     }
 
-    var ops = { 0: function() { cpu.p.c = 0; }, 1: function() { cpu.p.z = 0; },
-                2: function() { cpu.p.i = 0; }, 3: function() { cpu.p.d = 0; },
-                4: function() { cpu.p.x = 0; }, 5: function() { cpu.p.m = 0; },
-                6: function() { cpu.p.v = 0; }, 7: function() { cpu.p.n = 0; }};
+    var ops = { 0: function() { cpu.p.n = 0; }, 1: function() { cpu.p.v = 0; },
+                2: function() { cpu.p.m = 0; }, 3: function() { cpu.p.x = 0; },
+                4: function() { cpu.p.d = 0; }, 5: function() { cpu.p.i = 0; },
+                6: function() { cpu.p.z = 0; }, 7: function() { cpu.p.c = 0; }};
  
     for(var i = 0; i < 8; i++) {
       if(flags[i]==='1') {
