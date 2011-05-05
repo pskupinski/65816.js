@@ -1,7 +1,5 @@
 This project's goal is to fully emulate the 65816 microprocessor in JavaScript.  It would be awesome if at some point it could emulate an entire system such as the SNES, but that is something to consider later on. 
 
-At the moment many memory loading and storing operations are working, but there are still 200+ operations to go.
-
 You call the execute function of the cpu object with a raw hex string representing the program you wish to emulate and it will execute those instructions as close to the 65816 as possible.
 
 Short examples to try out:
@@ -15,3 +13,11 @@ cpu.r.a should be 0 after executing this.
 cpu.execute("18fba9ff01a0010099fea5ff");
 
 cpu.r.a should be 511 after executing this.
+
+cpu.execute("18fba900001ad0fd")
+
+This will loop until 0 is incremented past 0xffff and overflows back to 0.
+
+cpu.execute("18fba9ffff3a30fd")
+
+This will loop until 0xffff is decremented to 0x7fff and then stops.
