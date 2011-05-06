@@ -17,6 +17,50 @@
 function run_tests() {
   test_rep();
   test_sep();
+  test_branching();
+}
+
+function test_branching() {
+  module("Branching");
+  test("Test that BRA with 0x00 as its argument doesn't increment or "+
+       "decrement the program counter", function() {
+    var cpu = new CPU_65816();
+    cpu.execute("8000");
+    // NOTE: 0x8003 is subject to change however I decide to lay out memory
+    // eventually.
+    equals(cpu.r.pc, 0x8003, "Make sure that the program counter isn't "+
+                             "incremented or decremented if BRA is given "+
+                             "0x00 as its argument.");
+  });
+
+  test("Check that the branching operations properly treat the argument as "+
+       "a two's complement number", function() {
+    var cpu = new CPU_65816();
+    cpu.execute("80f0"); // negative two's complement number 0xf0 = -16
+    equals(cpu.r.pc, (0x8003-16), "A branching operation when given a "+
+                                  "negative two's complement number should "+
+                                  "decrement the program counter by the "+
+                                  "proper amount.");    
+    cpu.execute("8020"); // positive two's complement number.
+    equals(cpu.r.pc, (0x8003+0x20), "A branching operation when given a "+
+                                    "positive two's complement number should "+
+                                    "increment the program counter by the "+
+                                    "proper amount.");
+  });
+  
+  test("Check that BPL works as expected", function() {
+    var cpu = new CPU_65816();
+    cpu.execute("18fbc230a9fe7f1a10fd");
+    equals(cpu.r.a, 0x8000, "Check that branching only occurs while the "+
+                            "number is a two's complement positive number.");
+  });
+
+  test("Check that BMI works as expected", function() {
+    var cpu = new CPU_65816();
+    cpu.execute("18fbc230a901803a30fd");
+    equals(cpu.r.a, 0x7fff, "Check that branching only occurs while the "+
+                            "number is a two's complement negative number.");
+  });
 }
 
 function test_sep() {
