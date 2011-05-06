@@ -1,9 +1,13 @@
+Testing:
+- More tests for branching operations
+- Tests needed for JMP operations
+- Tests needed for LD* and ST* operations
+- Tests needed for IN* and DE* operations
+- Tests needed for T** transfer operations
 CPU:
-- Decrementing 0 with the DEC/DEY/DEX operations should result in 0xff(8-bit)
-  or 0xffff(16-bit).
 - Stack operations and stack support in general
 - Subroutines
-- Comparisons and branching
+- CMP support for more interesting branching
 - LDY and LDX must behave properly in 8-bit mode when x bit in the p status 
   register is set to one
 - Accumulator must behave properly when in 8-bit mode
