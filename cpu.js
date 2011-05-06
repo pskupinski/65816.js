@@ -107,7 +107,7 @@ var MMU = {
 
   load_rom: function(raw_hex) {
     var loc = 0x8000;
-    byte_buffer = [];
+    var byte_buffer = [];
     for(var i = 0; i < raw_hex.length; i++) {
       byte_buffer.push(raw_hex[i]);
       if(byte_buffer.length===2) {
