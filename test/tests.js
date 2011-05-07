@@ -36,8 +36,8 @@ function test_sbc() {
                        "when using SBC");
     equals(cpu.p.v, 0, "0x01 - 0x01 should not set the overflow(v) bit "+
                        "when using SBC");
-    equals(cpu.p.c, 0, "0x01 - 0x01 should not set the carry(c) bit when "+
-                       "using SBC");
+    equals(cpu.p.c, 1, "0x01 - 0x01 should set the carry(c) bit when using "+
+                       "SBC");
   });
 
   test("Test normal subtraction of two 16-bit numbers that don't cause a "+
@@ -52,8 +52,8 @@ function test_sbc() {
                        "when using SBC");
     equals(cpu.p.v, 0, "0x0001 - 0x0001 should not set the overflow(v) bit "+
                        "when using SBC");
-    equals(cpu.p.c, 0, "0x0001 - 0x0001 should not set the carry(c) bit "+
-                       "when using SBC");
+    equals(cpu.p.c, 1, "0x0001 - 0x0001 should set the carry(c) bit when "+
+                       "using SBC");
   });
   test("Test subtraction that triggers a borrow with 8-bit numbers", 
        function() {
@@ -67,7 +67,7 @@ function test_sbc() {
                           "when using SBC");
     equals(cpu.p.z, 0,    "0xd0 - 0xef should not set the zero(z) bit when "+
                           "using SBC");
-    equals(cpu.p.c, 1,    "0xd0 - 0xef should set the carry(c) bit when "+
+    equals(cpu.p.c, 0,    "0xd0 - 0xef should not set the carry(c) bit when "+
                           "using SBC");  
   });
   test("Test subtraction that triggers a borrow with 16-bit numbers", 
@@ -82,7 +82,7 @@ function test_sbc() {
                        "when using SBC");
     equals(cpu.p.z, 0, "0xd000 - 0xef00 should not set the zero(z) bit when "+
                        "using SBC");
-    equals(cpu.p.c, 1, "0xd000 - 0xef00 should set the carry(c) bit when "+
+    equals(cpu.p.c, 0, "0xd000 - 0xef00 should not set the carry(c) bit when "+
                        "using SBC");  
   });
 }

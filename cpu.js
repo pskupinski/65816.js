@@ -84,7 +84,8 @@ function CPU_65816() {
                       0x65 : ADC_direct_page, 0x72 : ADC_direct_page_indirect,
                       0x7d : ADC_absolute_indexed_x, 
                       0x79 : ADC_absolute_indexed_y,
-                      0x75 : ADC_direct_page_indexed_x, 0xe9 : SBC_const };
+                      0x75 : ADC_direct_page_indexed_x, 0xe9 : SBC_const,
+                      0xc9 : CMP_const };
 
   /**
    * Take a raw hex string representing the program and execute it.
@@ -163,6 +164,44 @@ var MMU = {
   }
 };
 
+var CMP_const = {
+  bytes_required:function(cpu) {
+    if(cpu.p.m) {
+      return 2; 
+    } else {
+      return 3; 
+    }
+  },
+  execute:function(cpu, bytes) {
+    var result;
+    if(cpu.p.m) {
+      result = cpu.r.a - bytes[0];  
+      if(result<0) {
+        cpu.p.c = 0;
+        result = 0x100 + result;
+      } else {
+        cpu.p.c = 1;
+      }
+      cpu.p.n = result >> 7;
+    } else {
+      result = cpu.r.a - ((bytes[1]<<8)|bytes[0]); 
+      if(result<0) {
+        cpu.p.c = 0;
+        result = 0x10000 + result;
+      } else {
+        cpu.p.c = 1;
+      }
+      cpu.p.n = result >> 15;
+    }
+
+    if(result===0) {
+      cpu.p.z = 1;
+    } else {
+      cpu.p.z = 0;
+    }    
+  }
+};
+
 var SBC_const = {
   bytes_required:function(cpu) {
     if(cpu.p.m) {
@@ -176,10 +215,10 @@ var SBC_const = {
     if(cpu.p.m) {
       cpu.r.a -= bytes[0] - cpu.p.c;
       if(cpu.r.a < 0) {
-        cpu.p.c = 1; 
+        cpu.p.c = 0; 
         cpu.r.a = 0x100 + cpu.r.a;
       } else {
-        cpu.p.c = 0;
+        cpu.p.c = 1;
       }
       cpu.p.n = cpu.r.a >> 7;  
 
@@ -195,10 +234,10 @@ var SBC_const = {
       var argument = (bytes[1]<<8)|bytes[0]; 
       cpu.r.a -= argument - cpu.p.c;
       if(cpu.r.a < 0) {
-        cpu.p.c = 1; 
+        cpu.p.c = 0; 
         cpu.r.a = 0x10000 + cpu.r.a;
       } else {
-        cpu.p.c = 0;
+        cpu.p.c = 1;
       }
       cpu.p.n = cpu.r.a >> 15;  
 
