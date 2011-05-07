@@ -79,7 +79,8 @@ function CPU_65816() {
                       0x98 : TYA, 0x4c : JMP_absolute, 
                       0x6c : JMP_absolute_indirect, 0x80 : BRA,
                       0xf0 : BEQ, 0xd0 : BNE, 0x90 : BCC, 0xb0 : BCS,
-                      0x50 : BVC, 0x70 : BVS, 0x10 : BPL, 0x30 : BMI };
+                      0x50 : BVC, 0x70 : BVS, 0x10 : BPL, 0x30 : BMI,
+                      0x69 : ADC_const };
 }
 
 var MMU = {
@@ -116,6 +117,44 @@ var MMU = {
         byte_buffer = [];      
       } 
     }    
+  }
+};
+
+var ADC_const = {
+  bytes_required:function(cpu) {
+    if(cpu.p.m) {
+      return 2;
+    } else {
+      return 3;
+    }
+  },
+  execute:function(cpu, bytes) {
+    // TODO: Signed overflow checking.
+    if(cpu.p.m) {
+      cpu.r.a += bytes[0] + cpu.p.c;
+      if(cpu.r.a & 0x100) {
+        cpu.p.c = 1;
+      } else {
+        cpu.p.c = 0;
+      } 
+      cpu.r.a &= 0xff;
+      cpu.p.n = cpu.r.a >> 7;
+    } else {
+      cpu.r.a += (bytes[1]<<8)|bytes[0] + cpu.p.c;
+      if(cpu.r.a & 0x10000) {
+        cpu.p.c = 1;
+      } else {
+        cpu.p.c = 0; 
+      }
+      cpu.r.a &= 0xffff;
+      cpu.p.n = cpu.r.a >> 15;
+    }
+
+    if(cpu.r.a===0) {
+      cpu.p.z = 1;
+    } else {
+      cpu.p.z = 0;
+    }
   }
 };
 

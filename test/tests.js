@@ -18,6 +18,66 @@ function run_tests() {
   test_rep();
   test_sep();
   test_branching();
+  test_adc();
+}
+
+function test_adc() {
+  module("ADC");
+  // TODO: signed overflow testing.
+  test("Test normal addition of two 16-bit numbers that don't cause an "+
+       "overflow (m bit is 0)", function() {
+     var cpu = new CPU_65816();
+     cpu.execute("18fb18c230a90100690100");
+     equals(cpu.r.a, 2, "0x0001 + 0x0001 should result in 0x0002 when using "+
+                        "ADC");
+     equals(cpu.p.n, 0, "0x0001 + 0x0001 does not result in a negative "+
+                        "two's complement number when adding with ADC."); 
+     equals(cpu.p.c, 0, "0x0001 + 0x0001 should not set the carry(c) bit when "+
+                        "adding with ADC");
+     equals(cpu.p.z, 0, "0x0001 + 0x0001 should not set the zero(z) bit when "+
+                        "adding with ADC");
+   });
+   test("Test normal addition of two 8-bit numbers that don't cause an "+
+       "overflow (m bit is 1)", function() {
+     var cpu = new CPU_65816();
+     cpu.execute("18fb18e230a9016901");
+     equals(cpu.r.a, 2, "0x01 + 0x01 should result in 0x02 when using "+
+                        "ADC");
+     equals(cpu.p.n, 0, "0x01 + 0x01 does not result in a negative "+
+                        "two's complement number when adding with ADC."); 
+     equals(cpu.p.c, 0, "0x01 + 0x01 should not set the carry(c) bit when "+
+                        "adding with ADC");
+     equals(cpu.p.z, 0, "0x01 + 0x01 should not set the zero(z) bit when "+
+                        "adding with ADC");
+   });
+  
+  test("Test that overflow sets the carry flag and works in general with two"+
+       "16-bit numbers (m bit is 0)", function() {
+    var cpu = new CPU_65816();
+    cpu.execute("18fb18c230a9ffff690100");
+    equals(cpu.p.c, 1, "0xffff + 0x0001 should set the carry bit when using "+
+                       "ADC");
+    equals(cpu.r.a, 0, "0xffff + 0x0001 should result in the accumulator "+
+                       "being 0 when using ADC");
+    equals(cpu.p.n, 0, "0xffff + 0x0001 should not set the negative(n) bit "+
+                       "when using ADC");
+    equals(cpu.p.z, 1, "0xffff + 0x0001 should set the zero(z) bit when using "+
+                       "ADC");
+  });
+
+  test("Test that overflow sets the carry flag and works in general with two"+
+       "8-bit numbers (m bit is 1)", function() {
+    var cpu = new CPU_65816();
+    cpu.execute("18fb18e230a9ff6901");
+    equals(cpu.p.c, 1, "0xff + 0x01 should set the carry bit when using "+
+                       "ADC");
+    equals(cpu.r.a, 0, "0xff + 0x01 should result in the accumulator "+
+                       "being 0 when using ADC");
+    equals(cpu.p.n, 0, "0xff + 0x01 should not set the negative(n) bit when "+
+                       "using ADC");
+    equals(cpu.p.z, 1, "0xff + 0x01 should set the zero(z) bit when using "+
+                       "ADC");
+  });
 }
 
 function test_branching() {
