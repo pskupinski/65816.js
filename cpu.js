@@ -80,7 +80,8 @@ function CPU_65816() {
                       0x6c : JMP_absolute_indirect, 0x80 : BRA,
                       0xf0 : BEQ, 0xd0 : BNE, 0x90 : BCC, 0xb0 : BCS,
                       0x50 : BVC, 0x70 : BVS, 0x10 : BPL, 0x30 : BMI,
-                      0x69 : ADC_const };
+                      0x69 : ADC_const, 0x6d : ADC_absolute, 
+                      0x65 : ADC_direct_page };
 }
 
 var MMU = {
@@ -175,6 +176,37 @@ var ADC_const = {
       cpu.p.z = 1;
     } else {
       cpu.p.z = 0;
+    }
+  }
+};
+
+var ADC_absolute = {
+  bytes_required:function() {
+    return 3;
+  },
+  execute:function(cpu, bytes) {
+    var location = (bytes[1]<<8)|bytes[0];
+    if(cpu.p.m) {
+      ADC_const.execute(cpu, [cpu.mmu.read_byte(location)]);
+    } else {
+      var low_byte = cpu.mmu.read_byte(location);
+      var high_byte = cpu.mmu.read_byte(location+1);
+      ADC_const.execute(cpu, [low_byte, high_byte]);
+    }
+  }
+};
+
+var ADC_direct_page = {
+  bytes_required:function() {
+    return 2;
+  },
+  execute:function(cpu, bytes) {
+    if(cpu.p.m) {
+      ADC_const.execute(cpu, [cpu.mmu.read_byte(bytes[0])]);
+    } else {
+      var low_byte = cpu.mmu.read_byte(bytes[0]);
+      var high_byte = cpu.mmu.read_byte(bytes[0]+1);
+      ADC_const.execute(cpu, [low_byte, high_byte]);
     }
   }
 };
