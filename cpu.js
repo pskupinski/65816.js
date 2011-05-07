@@ -131,6 +131,7 @@ var ADC_const = {
   execute:function(cpu, bytes) {
     // TODO: Signed overflow checking.
     if(cpu.p.m) {
+      var old_a = cpu.r.a; 
       cpu.r.a += bytes[0] + cpu.p.c;
       if(cpu.r.a & 0x100) {
         cpu.p.c = 1;
@@ -139,8 +140,19 @@ var ADC_const = {
       } 
       cpu.r.a &= 0xff;
       cpu.p.n = cpu.r.a >> 7;
+       
+      // Check for signed overflow.
+      // If they started with the same sign and then the resulting sign is
+      // different then we have a signed overflow.
+      if((!((old_a ^ bytes[0]) & 0x80)) && ((cpu.r.a ^ old_a) & 0x80)) {
+        cpu.p.v = 1;
+      } else {
+        cpu.p.v = 0;
+      }
     } else {
-      cpu.r.a += (bytes[1]<<8)|bytes[0] + cpu.p.c;
+      var old_a = cpu.r.a;
+      var argument = (bytes[1]<<8)|bytes[0];
+      cpu.r.a += argument + cpu.p.c;
       if(cpu.r.a & 0x10000) {
         cpu.p.c = 1;
       } else {
@@ -148,6 +160,15 @@ var ADC_const = {
       }
       cpu.r.a &= 0xffff;
       cpu.p.n = cpu.r.a >> 15;
+
+      // Check for signed overflow.
+      // If they started with the same sign and then the resulting sign is
+      // different then we have a signed overflow.
+      if((!((old_a ^ argument) & 0x8000)) && ((cpu.r.a ^ old_a) & 0x8000)) {
+        cpu.p.v = 1;
+      } else {
+        cpu.p.v = 0;
+      }
     }
 
     if(cpu.r.a===0) {
