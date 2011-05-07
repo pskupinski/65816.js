@@ -46,7 +46,7 @@ function test_cmp() {
                        "bit should not be set");
     equals(cpu.p.z, 0, "When comparing 0xff01 and 0xfeff the zero(z) bit "+
                        "should not be set (0xff01 != 0xfeff)");
-    equals(cpu.p.c, 1, "When comparing 0xff01 and 0xfeff the carry(c) bit"+
+    equals(cpu.p.c, 1, "When comparing 0xff01 and 0xfeff the carry(c) bit "+
                        "should be set (0xff01 >= 0xfeff)"); 
   });
 }
