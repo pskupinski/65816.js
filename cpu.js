@@ -81,7 +81,10 @@ function CPU_65816() {
                       0xf0 : BEQ, 0xd0 : BNE, 0x90 : BCC, 0xb0 : BCS,
                       0x50 : BVC, 0x70 : BVS, 0x10 : BPL, 0x30 : BMI,
                       0x69 : ADC_const, 0x6d : ADC_absolute, 
-                      0x65 : ADC_direct_page, 0x72 : ADC_direct_page_indirect };
+                      0x65 : ADC_direct_page, 0x72 : ADC_direct_page_indirect,
+                      0x7d : ADC_absolute_indexed_x, 
+                      0x79 : ADC_absolute_indexed_y,
+                      0x75 : ADC_direct_page_indexed_x };
 }
 
 var MMU = {
@@ -228,6 +231,33 @@ var ADC_direct_page_indirect = {
       ADC_const.execute(cpu, [low_byte, high_byte]);
     }
   } 
+};
+
+ADC_absolute_indexed_x = {
+  bytes_required:function() {
+    return 3;
+  },
+  execute:function(cpu, bytes) {
+    ADC_absolute.execute(cpu, ((bytes[1]<<8)|bytes[0])+cpu.r.x);  
+  }
+};
+
+ADC_absolute_indexed_y = {
+  bytes_required:function() {
+    return 3;
+  },
+  execute:function(cpu, bytes) {
+    ADC_absolute.execute(cpu, ((bytes[1]<<8)|bytes[0])+cpu.r.y);  
+  }
+};
+
+ADC_direct_page_indexed_x = {
+  bytes_required:function() {
+    return 2;
+  },
+  execute:function(cpu, bytes) {
+    ADC_direct_page.execute(cpu, bytes[0]+cpu.r.x);  
+  }
 };
 
 var BMI = {
