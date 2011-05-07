@@ -85,6 +85,45 @@ function CPU_65816() {
                       0x7d : ADC_absolute_indexed_x, 
                       0x79 : ADC_absolute_indexed_y,
                       0x75 : ADC_direct_page_indexed_x };
+
+  /**
+   * Take a raw hex string representing the program and execute it.
+   */
+  this.execute = function(raw_hex, has_header) {
+    this.mmu.load_rom(raw_hex);
+    this.r.pc = 0x8000;
+ 
+    if(has_header) {
+      this.r.pc += 4096;
+    }
+
+    var executing = true;
+    while(executing) {
+      var b = this.mmu.read_byte(this.r.pc); 
+      this.r.pc++;
+
+      // If we reach the end of the code then stop everything.
+      if(b==null) {
+        break;
+      }
+      var operation = this.opcode_map[b];
+      // Check if unsupported opcode.
+      if(operation==null) {
+        break;
+      }
+      var bytes_required = operation.bytes_required(this);
+      if(bytes_required===1) {
+        operation.execute(this);
+      } else {
+        var bytes = [];
+        for(var i = 1; i < bytes_required; i++) {
+          bytes.push(this.mmu.read_byte(this.r.pc));
+          this.r.pc++;
+        }
+        operation.execute(this,bytes);
+      }
+    } 
+  } 
 }
 
 var MMU = {
@@ -1811,42 +1850,3 @@ var SEC = {
     cpu.p.c = 1;
   }
 };
-
-/**
- * Take a raw hex string representing the program and execute it.
- */
-CPU_65816.prototype.execute = function(raw_hex, has_header) {
-  this.mmu.load_rom(raw_hex);
-  this.r.pc = 0x8000;
- 
-  if(has_header) {
-    this.r.pc += 4096;
-  }
-
-  var executing = true;
-  while(executing) {
-    var b = this.mmu.read_byte(this.r.pc); 
-    this.r.pc++;
-
-    // If we reach the end of the code then stop everything.
-    if(b==null) {
-      break;
-    }
-    var operation = this.opcode_map[b];
-    // Check if unsupported opcode.
-    if(operation==null) {
-      break;
-    }
-    var bytes_required = operation.bytes_required(this);
-    if(bytes_required===1) {
-      operation.execute(this);
-    } else {
-      var bytes = [];
-      for(var i = 1; i < bytes_required; i++) {
-          bytes.push(this.mmu.read_byte(this.r.pc));
-          this.r.pc++;
-      }
-      operation.execute(this,bytes);
-    }
-  } 
-}
