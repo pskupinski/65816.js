@@ -84,7 +84,7 @@ function CPU_65816() {
                       0x65 : ADC_direct_page, 0x72 : ADC_direct_page_indirect,
                       0x7d : ADC_absolute_indexed_x, 
                       0x79 : ADC_absolute_indexed_y,
-                      0x75 : ADC_direct_page_indexed_x };
+                      0x75 : ADC_direct_page_indexed_x, 0xe9 : SBC_const };
 
   /**
    * Take a raw hex string representing the program and execute it.
@@ -163,6 +163,63 @@ var MMU = {
   }
 };
 
+var SBC_const = {
+  bytes_required:function(cpu) {
+    if(cpu.p.m) {
+      return 2;
+    } else {
+      return 3;
+    }  
+  },
+  execute:function(cpu, bytes) {
+    var old_a = cpu.r.a;
+    if(cpu.p.m) {
+      cpu.r.a -= bytes[0] - cpu.p.c;
+      if(cpu.r.a < 0) {
+        cpu.p.c = 1; 
+        cpu.r.a = 0x100 + cpu.r.a;
+      } else {
+        cpu.p.c = 0;
+      }
+      cpu.p.n = cpu.r.a >> 7;  
+
+      // Check for signed overflow.
+      // If they started with the same sign and then the resulting sign is
+      // different then we have a signed overflow.
+      if((!((old_a ^ bytes[0]) & 0x80)) && ((cpu.r.a ^ old_a) & 0x80)) {
+        cpu.p.v = 1;
+      } else {
+        cpu.p.v = 0;
+      }
+    } else {
+      var argument = (bytes[1]<<8)|bytes[0]; 
+      cpu.r.a -= argument - cpu.p.c;
+      if(cpu.r.a < 0) {
+        cpu.p.c = 1; 
+        cpu.r.a = 0x10000 + cpu.r.a;
+      } else {
+        cpu.p.c = 0;
+      }
+      cpu.p.n = cpu.r.a >> 15;  
+
+      // Check for signed overflow.
+      // If they started with the same sign and then the resulting sign is
+      // different then we have a signed overflow.
+      if((!((old_a ^ argument) & 0x8000)) && ((cpu.r.a ^ old_a) & 0x8000)) {
+        cpu.p.v = 1;
+      } else {
+        cpu.p.v = 0;
+      }     
+    } 
+
+    if(cpu.r.a===0) {
+      cpu.p.z = 1;
+    } else {
+      cpu.p.z = 0;
+    }
+  }
+};
+
 var ADC_const = {
   bytes_required:function(cpu) {
     if(cpu.p.m) {
@@ -172,8 +229,8 @@ var ADC_const = {
     }
   },
   execute:function(cpu, bytes) {
+    var old_a = cpu.r.a; 
     if(cpu.p.m) {
-      var old_a = cpu.r.a; 
       cpu.r.a += bytes[0] + cpu.p.c;
       if(cpu.r.a & 0x100) {
         cpu.p.c = 1;
@@ -192,7 +249,6 @@ var ADC_const = {
         cpu.p.v = 0;
       }
     } else {
-      var old_a = cpu.r.a;
       var argument = (bytes[1]<<8)|bytes[0];
       cpu.r.a += argument + cpu.p.c;
       if(cpu.r.a & 0x10000) {
@@ -272,7 +328,7 @@ var ADC_direct_page_indirect = {
   } 
 };
 
-ADC_absolute_indexed_x = {
+var ADC_absolute_indexed_x = {
   bytes_required:function() {
     return 3;
   },
@@ -281,7 +337,7 @@ ADC_absolute_indexed_x = {
   }
 };
 
-ADC_absolute_indexed_y = {
+var ADC_absolute_indexed_y = {
   bytes_required:function() {
     return 3;
   },
@@ -290,7 +346,7 @@ ADC_absolute_indexed_y = {
   }
 };
 
-ADC_direct_page_indexed_x = {
+var ADC_direct_page_indexed_x = {
   bytes_required:function() {
     return 2;
   },
