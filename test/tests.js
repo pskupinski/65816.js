@@ -132,7 +132,7 @@ function test_adc() {
 
   test("Test ADC direct page with 16-bit numbers (m bit is 0)", function() {
     var cpu = new CPU_65816();
-    cpu.execute("18fb18c230a9010085ffa9ff7f65ff")
+    cpu.execute("18fb18c230a9010085fea9ff7f65fe");
     equals(cpu.r.a, 0x8000, "0x7fff + 0x0001 should result in 0x8000 when "+
                             "using ADC");
     equals(cpu.p.v, 1, "0x7fff + 0x0001 should set the overflow(v) bit when "+
@@ -162,7 +162,7 @@ function test_adc() {
 
   test("Test ADC absolute with 16-bit numbers (m bit is 0)", function() {
     var cpu = new CPU_65816();
-    cpu.execute("18fb18c230a901008dffffa9ff7f6dffff")
+    cpu.execute("18fb18c230a901008dffffa9ff7f6dffff");
     equals(cpu.r.a, 0x8000, "0x7fff + 0x0001 should result in 0x8000 when "+
                             "using ADC");
     equals(cpu.p.v, 1, "0x7fff + 0x0001 should set the overflow(v) bit when "+
@@ -173,6 +173,38 @@ function test_adc() {
                        "using ADC");
     equals(cpu.p.n, 1, "0x7fff + 0x0001 should set the negative(n) bit when "+
                        "using ADC");   
+  });
+
+  test("Test ADC direct page indirect with 8-bit numbers (m bit is 1)", 
+       function() {
+    var cpu = new CPU_65816();
+    cpu.execute("18fb18e230a90185ffa9ff85fd64fea97f72fd");
+    equals(cpu.r.a, 0x80, "0x7f + 0x01 should result in 0x80 when "+
+                            "using ADC");
+    equals(cpu.p.v, 1, "0x7f + 0x01 should set the overflow(v) bit when "+
+                       "using ADC");
+    equals(cpu.p.c, 0, "0x7f + 0x01 should not set the carry(c) bit when "+
+                       "using ADC");
+    equals(cpu.p.z, 0, "0x7f + 0x01 should not set the zero(z) bit when "+
+                       "using ADC");
+    equals(cpu.p.n, 1, "0x7f + 0x01 should set the negative(n) bit when "+
+                       "using ADC");   
+  });
+  test("Test ADC direct page indirect with 16-bit numbers (m bit is 0)", 
+       function() {
+    var cpu = new CPU_65816();
+    cpu.execute("18fb18c230a901008500a9000085bba9ff7f72bb");
+    equals(cpu.r.a, 0x8000, "0x7fff + 0x0001 should result in 0x8000 when "+
+                            "using ADC");
+    equals(cpu.p.v, 1, "0x7fff + 0x0001 should set the overflow(v) bit when "+
+                       "using ADC");
+    equals(cpu.p.c, 0, "0x7fff + 0x0001 should not set the carry(c) bit when "+
+                       "using ADC");
+    equals(cpu.p.z, 0, "0x7fff + 0x0001 should not set the zero(z) bit when "+
+                       "using ADC");
+    equals(cpu.p.n, 1, "0x7fff + 0x0001 should set the negative(n) bit when "+
+                       "using ADC");   
+
   });
 }
 

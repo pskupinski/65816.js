@@ -81,7 +81,7 @@ function CPU_65816() {
                       0xf0 : BEQ, 0xd0 : BNE, 0x90 : BCC, 0xb0 : BCS,
                       0x50 : BVC, 0x70 : BVS, 0x10 : BPL, 0x30 : BMI,
                       0x69 : ADC_const, 0x6d : ADC_absolute, 
-                      0x65 : ADC_direct_page };
+                      0x65 : ADC_direct_page, 0x72 : ADC_direct_page_indirect };
 }
 
 var MMU = {
@@ -130,7 +130,6 @@ var ADC_const = {
     }
   },
   execute:function(cpu, bytes) {
-    // TODO: Signed overflow checking.
     if(cpu.p.m) {
       var old_a = cpu.r.a; 
       cpu.r.a += bytes[0] + cpu.p.c;
@@ -201,14 +200,34 @@ var ADC_direct_page = {
     return 2;
   },
   execute:function(cpu, bytes) {
+    var location = bytes[0] + cpu.r.d;
     if(cpu.p.m) {
-      ADC_const.execute(cpu, [cpu.mmu.read_byte(bytes[0])]);
+      ADC_const.execute(cpu, [cpu.mmu.read_byte(location)]);
     } else {
-      var low_byte = cpu.mmu.read_byte(bytes[0]);
-      var high_byte = cpu.mmu.read_byte(bytes[0]+1);
+      var low_byte = cpu.mmu.read_byte(location);
+      var high_byte = cpu.mmu.read_byte(location+1);
       ADC_const.execute(cpu, [low_byte, high_byte]);
     }
   }
+};
+
+var ADC_direct_page_indirect = {
+   bytes_required:function() {
+    return 2;
+  },
+  execute:function(cpu, bytes) {
+    var location = bytes[0] + cpu.r.d;
+    var low_byte_loc = cpu.mmu.read_byte(location);
+    var high_byte_loc = cpu.mmu.read_byte(location+1);
+    var absolute_location = high_byte_loc | low_byte_loc;
+    if(cpu.p.m) {
+      ADC_const.execute(cpu, [cpu.mmu.read_byte(absolute_location)]);
+    } else {
+      var low_byte = cpu.mmu.read_byte(absolute_location);
+      var high_byte = cpu.mmu.read_byte(absolute_location+1);
+      ADC_const.execute(cpu, [low_byte, high_byte]);
+    }
+  } 
 };
 
 var BMI = {
