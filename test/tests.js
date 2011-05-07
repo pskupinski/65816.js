@@ -20,6 +20,35 @@ function run_tests() {
   test_branching();
   test_adc();
   test_sbc();
+  test_cmp();
+}
+
+function test_cmp() {
+  module("CMP");
+  test("Compare two 8-bit numbers, 0x01 and 0xff", function() {
+    var cpu = new CPU_65816();
+    cpu.execute("18fbe23018a901c9ff");
+    equals(cpu.r.a, 0x01, "CMP should not change the value of the "+
+                          "accumulator");
+    equals(cpu.p.z, 0, "When comparing 0x01 and 0xff the zero(z) bit "+
+                       "should not be set (0x01 != 0xff)");   
+    equals(cpu.p.n, 0, "When comparing 0x01 and 0xff the negative(n) bit "+
+                       "should not be set"); 
+    equals(cpu.p.c, 0, "When comparing 0x01 and 0xff the carry(c) bit "+
+                       "should not be set (0x01 < 0xff)");
+  });
+  test("Compare two 16-bit numbers, 0xff01 and 0xfeff", function() {
+    var cpu = new CPU_65816();
+    cpu.execute("18fbc23018a901ffc9fffe");
+    equals(cpu.r.a, 0xff01, "CMP should not change the value of the "+
+                            "accumulator");
+    equals(cpu.p.n, 0, "When comparing 0xff01 and 0xfeff the negative(n) "+
+                       "bit should not be set");
+    equals(cpu.p.z, 0, "When comparing 0xff01 and 0xfeff the zero(z) bit "+
+                       "should not be set (0xff01 != 0xfeff)");
+    equals(cpu.p.c, 1, "When comparing 0xff01 and 0xfeff the carry(c) bit"+
+                       "should be set (0xff01 >= 0xfeff)"); 
+  });
 }
 
 function test_sbc() {
