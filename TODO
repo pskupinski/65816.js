@@ -1,5 +1,6 @@
 Testing:
 - More tests for branching operations
+- More tests for CMP/CPY/CPX operations
 - Tests needed for JMP operations
 - Tests needed for LD* and ST* operations
 - Tests needed for IN* and DE* operations
@@ -7,10 +8,7 @@ Testing:
 CPU:
 - Stack operations and stack support in general
 - Subroutines
-- CMP support for more interesting branching
-- LDY and LDX must behave properly in 8-bit mode when x bit in the p status 
-  register is set to one
-- Accumulator must behave properly when in 8-bit mode
+- Decimal mode support
 - Emulation mode support in general.
 - Have each operation return the number of cycles used by the execute function.
 - Implement the rest of the missing operations.
