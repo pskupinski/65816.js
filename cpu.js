@@ -251,22 +251,23 @@ var LSR_direct_page = {
     return 2;
   },
   execute:function(cpu, bytes) {
+    var location = bytes[0] + cpu.r.d;
     var shiftee;
     if(cpu.p.m) {
-      shiftee = cpu.mmu.ready_byte(bytes[0]);
+      shiftee = cpu.mmu.ready_byte(location);
       cpu.p.c = shiftee & 0x0001;   
       shiftee = shiftee >> 1;
-      cpu.mmu.store_byte(bytes[0], shiftee); 
+      cpu.mmu.store_byte(location, shiftee); 
     } else {
-      var low_byte = cpu.mmu.read_byte(bytes[0]);
-      var high_byte = cpu.mmu.read_byte(bytes[0]+1);
+      var low_byte = cpu.mmu.read_byte(location);
+      var high_byte = cpu.mmu.read_byte(location+1);
       shiftee = (high_byte<<8)|low_byte;
       cpu.p.c = cpu.r.a & 0x01;
       shiftee = shiftee >> 1;
       low_byte = shiftee & 0x00ff;
       high_byte = shiftee >> 8;
-      cpu.mmu.store_byte(bytes[0], low_byte);
-      cpu.mmu.store_byte(bytes[0]+1, high_byte);
+      cpu.mmu.store_byte(location, low_byte);
+      cpu.mmu.store_byte(location+1, high_byte);
     }
     
     cpu.p.n = 0;
