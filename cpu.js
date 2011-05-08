@@ -116,7 +116,10 @@ function CPU_65816() {
                       0x56 : LSR_direct_page_indexed_x, 0x0a : ASL_accumulator,
                       0x0e : ASL_absolute, 0x06 : ASL_direct_page, 
                       0x1e : ASL_absolute_indexed_x, 
-                      0x16 : ASL_direct_page_indexed_x };
+                      0x16 : ASL_direct_page_indexed_x, 0x2a : ROL_accumulator,
+                      0x2e : ROL_absolute, 0x26 : ROL_direct_page,
+                      0x3e : ROL_absolute_indexed_x, 
+                      0x36 : ROL_direct_page_indexed_x };
 
   /**
    * Take a raw hex string representing the program and execute it.
@@ -192,6 +195,136 @@ var MMU = {
         byte_buffer = [];      
       } 
     }    
+  }
+};
+
+var ROL_accumulator = {
+  bytes_required:function() {
+    return 1;
+  },
+  execute:function(cpu) {
+    if(cpu.p.m) {
+      var old_c = cpu.p.c;
+      cpu.p.c = cpu.r.a >> 7;
+      cpu.r.a = cpu.r.a << 1; 
+      cpu.r.a &= 0xfe;
+      cpu.r.a |= old_c;
+      cpu.p.n = cpu.r.a >> 7;
+    } else {
+      var old_c = cpu.p.c;
+      cpu.p.c = cpu.r.a >> 15;
+      cpu.r.a = cpu.r.a << 1;
+      cpu.r.a &= 0xfffe;
+      cpu.r.a |= old_c;
+      cpu.p.n = cpu.r.a >> 15;
+    }
+
+    if(cpu.r.a===0) {
+      cpu.p.z = 1;
+    } else {
+      cpu.p.z = 0;
+    }
+  }
+};
+
+var ROL_absolute = {
+  bytes_required:function() {
+    return 3;
+  },
+  execute:function(cpu, bytes) {
+    var location = (bytes[1]<<8)|bytes[0];
+    var shiftee;
+    if(cpu.p.m) {
+      shiftee = cpu.mmu.read_byte(location);
+      var old_c = cpu.p.c;
+      cpu.p.c = shiftee >> 7;
+      shiftee = shiftee << 1; 
+      shiftee &= 0xfe;
+      shiftee |= old_c;
+      cpu.p.n = shiftee >> 7;
+      cpu.mmu.store_byte(location, shiftee);
+    } else {
+      var low_byte = cpu.mmu.read_byte(location);
+      var high_byte = cpu.mmu.read_byte(location+1);
+      shiftee = (high_byte<<8)|low_byte;
+      var old_c = cpu.p.c;
+      cpu.p.c = shiftee >> 15;
+      shiftee = shiftee << 1;
+      shiftee &= 0xfffe;
+      shiftee |= old_c;
+      cpu.p.n = shiftee >> 15;
+      low_byte = shiftee & 0x00ff;
+      high_byte = shiftee >> 8;
+      cpu.mmu.store_byte(location, low_byte);
+      cpu.mmu.store_byte(location+1, high_byte);
+    }
+   
+    if(shiftee===0) {
+      cpu.p.z = 1;
+    } else {
+      cpu.p.z = 0; 
+    }
+  }
+};
+
+var ROL_direct_page = {
+  bytes_required:function() {
+    return 2;
+  },
+  execute:function(cpu, bytes) {
+    var location = bytes[0]+cpu.r.d;
+    var shiftee;
+    if(cpu.p.m) {
+      shiftee = cpu.mmu.read_byte(location);
+      var old_c = cpu.p.c;
+      cpu.p.c = shiftee >> 7;
+      shiftee = shiftee << 1; 
+      shiftee &= 0xfe;
+      shiftee |= old_c;
+      cpu.p.n = shiftee >> 7;
+      cpu.mmu.store_byte(location, shiftee);
+    } else {
+      var low_byte = cpu.mmu.read_byte(location);
+      var high_byte = cpu.mmu.read_byte(location+1);
+      shiftee = (high_byte<<8)|low_byte;
+      var old_c = cpu.p.c;
+      cpu.p.c = shiftee >> 15;
+      shiftee = shiftee << 1;
+      shiftee &= 0xfffe;
+      shiftee |= old_c;
+      cpu.p.n = shiftee >> 15;
+      low_byte = shiftee & 0x00ff;
+      high_byte = shiftee >> 8;
+      cpu.mmu.store_byte(location, low_byte);
+      cpu.mmu.store_byte(location+1, high_byte);
+    }
+   
+    if(shiftee===0) {
+      cpu.p.z = 1;
+    } else {
+      cpu.p.z = 0; 
+    }
+  }
+};
+
+var ROL_absolute_indexed_x = {
+  bytes_required:function() {
+    return 3;
+  },
+  execute:function(cpu, bytes) {
+    var location = ((bytes[1]<<8)|bytes[0])+cpu.r.x;
+    var location_high_byte = location >> 8;
+    var location_low_byte = location & 0x00ff;
+    ROL_absolute.execute(cpu, [location_low_byte, location_high_byte]);  
+  }
+};
+
+var ROL_direct_page_indexed_x = {
+  bytes_required:function() {
+    return 2;
+  },
+  execute:function(cpu, bytes) {
+    ROL_direct_page.execute(cpu, [bytes[0]+cpu.r.x]);  
   }
 };
 
