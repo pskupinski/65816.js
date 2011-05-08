@@ -104,7 +104,13 @@ function CPU_65816() {
                       0x12 : ORA_direct_page_indirect, 
                       0x1d : ORA_absolute_indexed_x, 
                       0x1f : ORA_absolute_indexed_y,
-                      0x15 : ORA_direct_page_indexed_x };
+                      0x15 : ORA_direct_page_indexed_x,
+                      0x49 : EOR_const, 0x4d : EOR_absolute,
+                      0x45 : EOR_direct_page, 
+                      0x52 : EOR_direct_page_indirect,
+                      0x5d : EOR_absolute_indexed_x,
+                      0x59 : EOR_absolute_indexed_y,
+                      0x55 : EOR_direct_page_indexed_x };
 
   /**
    * Take a raw hex string representing the program and execute it.
@@ -180,6 +186,115 @@ var MMU = {
         byte_buffer = [];      
       } 
     }    
+  }
+};
+
+var EOR_const = {
+  bytes_required:function(cpu) {
+    if(cpu.p.m) {
+      return 2;
+    } else {
+      return 3; 
+    }
+  },
+  execute:function(cpu, bytes) {
+    if(cpu.p.m) {
+      cpu.r.a ^= bytes[0];
+      cpu.p.n = cpu.r.a >> 7;
+    } else {
+      cpu.r.a ^= (bytes[1]<<8)|bytes[0];
+      cpu.p.n = cpu.r.a >> 15;
+    }
+
+    if(cpu.r.a===0) {
+      cpu.p.z = 1;
+    } else {
+      cpu.p.z = 0;
+    }  
+  }
+};
+
+var EOR_absolute = {
+  bytes_required:function() {
+    return 3;
+  },
+  execute:function(cpu, bytes) {
+    var location = (bytes[1]<<8)|bytes[0];
+    if(cpu.p.m) {
+      EOR_const.execute(cpu, [cpu.mmu.read_byte(location)]);
+    } else {
+      var low_byte = cpu.mmu.read_byte(location);
+      var high_byte = cpu.mmu.read_byte(location+1);
+      EOR_const.execute(cpu, [low_byte, high_byte]);
+    }
+  }
+};
+
+var EOR_direct_page = {
+  bytes_required:function() {
+    return 2;
+  },
+  execute:function(cpu, bytes) {
+    var location = bytes[0] + cpu.r.d;
+    if(cpu.p.m) {
+      EOR_const.execute(cpu, cpu.mmu.read_byte(location));
+    } else {
+      var low_byte = cpu.mmu.read_byte(location);
+      var high_byte = cpu.mmu.read_byte(location+1);
+      EOR_const.execute(cpu, [low_byte, high_byte]);
+    } 
+  }
+};
+
+var EOR_direct_page_indirect = {
+   bytes_required:function() {
+    return 2;
+  },
+  execute:function(cpu, bytes) {
+    var location = bytes[0] + cpu.r.d;
+    var low_byte_loc = cpu.mmu.read_byte(location);
+    var high_byte_loc = cpu.mmu.read_byte(location+1);
+    var absolute_location = (high_byte_loc<<8) | low_byte_loc;
+    if(cpu.p.m) {
+      EOR_const.execute(cpu, [cpu.mmu.read_byte(absolute_location)]);
+    } else {
+      var low_byte = cpu.mmu.read_byte(absolute_location);
+      var high_byte = cpu.mmu.read_byte(absolute_location+1);
+      EOR_const.execute(cpu, [low_byte, high_byte]);
+    }
+  } 
+};
+
+var EOR_absolute_indexed_x = {
+  bytes_required:function() {
+    return 3;
+  },
+  execute:function(cpu, bytes) {
+    var location = ((bytes[1]<<8)|bytes[0])+cpu.r.x;
+    var location_high_byte = (location & 0xff00)>>8;
+    var location_low_byte = location & 0x00ff;
+    EOR_absolute.execute(cpu, [location_low_byte, location_high_byte]);  
+  }
+};
+
+var EOR_absolute_indexed_y = {
+  bytes_required:function() {
+    return 3;
+  },
+  execute:function(cpu, bytes) {
+    var location = ((bytes[1]<<8)|bytes[0])+cpu.r.y;
+    var location_high_byte = (location & 0xff00)>>8;
+    var location_low_byte = location & 0x00ff;
+    EOR_absolute.execute(cpu, [location_low_byte, location_high_byte]);  
+  }
+};
+
+var EOR_direct_page_indexed_x = {
+  bytes_required:function() {
+    return 2;
+  },
+  execute:function(cpu, bytes) {
+    EOR_direct_page.execute(cpu, [bytes[0]+cpu.r.x]);  
   }
 };
 
