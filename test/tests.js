@@ -21,6 +21,19 @@ function run_tests() {
   test_adc();
   test_sbc();
   test_cmp();
+  test_subroutines();
+}
+
+function test_subroutines() {
+  module("Subroutines");
+  test("Short program to check that JSR and RTS work", function() {
+    var cpu = new CPU_65816();
+    // It jumps to 0xffff so it doesn't execute the subroutine again and 
+    // effectively halts the program.
+    cpu.execute("18fbc23018a9ffff200e804cffff3a60");
+    equals(cpu.r.a, 0xfffe, "The subroutine should execute exactly once, "+
+                            "decrementing 0xffff to 0xfffe."); 
+  });
 }
 
 function test_cmp() {
