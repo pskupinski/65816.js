@@ -7,7 +7,7 @@ Testing:
 - Tests needed for T** transfer operations
 - Tests needed for the numerous other operations added
 CPU:
-- Subroutines
+- Interrupts
 - Decimal mode support
 - Emulation mode support
 - Have each operation return the number of cycles used by the execute function.
