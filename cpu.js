@@ -124,7 +124,7 @@ function CPU_65816() {
                       0x7e : ROR_absolute_indexed_x,
                       0x76 : ROR_direct_page_indexed_x,
                       0x48 : PHA , 0x68 : PLA, 0x5a : PHY, 0x7a : PLY,
-                      0xda : PHX, 0xfa : PLX };
+                      0xda : PHX, 0xfa : PLX, 0x08 : PHP, 0x28 : PLP };
 
   /**
    * Take a raw hex string representing the program and execute it.
@@ -200,6 +200,36 @@ var MMU = {
         byte_buffer = [];      
       } 
     }    
+  }
+};
+
+var PHP = {
+  bytes_required:function() {
+    return 1;
+  },
+  execute:function(cpu) {
+    // TODO: Handle emulation mode.
+    var p_byte = (cpu.p.n<<7)|(cpu.p.v<<6)|(cpu.p.m<<5)|(cpu.p.x<<4)|
+                 (cpu.p.d<<3)|(cpu.p.i<<2)|(cpu.p.z<<1)|cpu.p.c;
+    cpu.mmu.store_byte(cpu.r.s--, p_byte);
+  }
+};
+
+var PLP = {
+  bytes_required:function() {
+    return 1;
+  },
+  execute:function(cpu) {
+    // TODO: Handle emulation mode.
+    var p_byte = cpu.mmu.read_byte(++cpu.r.s);
+    cpu.p.c = p_byte & 0x01;
+    cpu.p.z = (p_byte & 0x02) >> 1;
+    cpu.p.i = (p_byte & 0x04) >> 2;
+    cpu.p.d = (p_byte & 0x08) >> 3;
+    cpu.p.x = (p_byte & 0x10) >> 4;
+    cpu.p.m = (p_byte & 0x20) >> 5;
+    cpu.p.v = (p_byte & 0x40) >> 6;
+    cpu.p.n = p_byte >> 7;
   }
 };
 
