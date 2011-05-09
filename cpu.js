@@ -123,9 +123,9 @@ function CPU_65816() {
                       0x6e : ROR_absolute, 0x66 : ROR_direct_page,
                       0x7e : ROR_absolute_indexed_x,
                       0x76 : ROR_direct_page_indexed_x,
-                      0x48 : PHA , 0x68 : PLA, 0x5a : PHY, 0x7a : PLY,
+                      0x48 : PHA, 0x68 : PLA, 0x5a : PHY, 0x7a : PLY,
                       0xda : PHX, 0xfa : PLX, 0x08 : PHP, 0x28 : PLP, 
-                      0xf4 : PEA, 0xd4 : PEI };
+                      0xf4 : PEA, 0xd4 : PEI, 0x8b : PHB, 0xab : PLB };
 
   /**
    * Take a raw hex string representing the program and execute it.
@@ -202,6 +202,30 @@ var MMU = {
       } 
     }    
   }
+};
+
+var PHB = {
+  bytes_required:function() {
+    return 1;
+  },
+  execute:function(cpu) {
+    cpu.mmu.store_byte(cpu.r.s--, cpu.r.dbr);
+  }
+};
+
+var PLB = {
+   bytes_required:function() {
+    return 1;
+  },
+  execute:function(cpu) {
+    cpu.r.dbr = cpu.mmu.read_byte(++cpu.r.s);
+    cpu.p.n = cpu.r.dbr >> 7;
+    if(cpu.r.dbr===0) {
+      cpu.p.z = 1;
+    } else {
+      cpu.p.z = 0;
+    }
+  } 
 };
 
 var PEA = {
