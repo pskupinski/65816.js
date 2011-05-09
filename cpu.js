@@ -125,7 +125,8 @@ function CPU_65816() {
                       0x76 : ROR_direct_page_indexed_x,
                       0x48 : PHA, 0x68 : PLA, 0x5a : PHY, 0x7a : PLY,
                       0xda : PHX, 0xfa : PLX, 0x08 : PHP, 0x28 : PLP, 
-                      0xf4 : PEA, 0xd4 : PEI, 0x8b : PHB, 0xab : PLB };
+                      0xf4 : PEA, 0xd4 : PEI, 0x8b : PHB, 0xab : PLB,
+                      0x4b : PHK, 0x0b : PHD, 0x2b : PLD };
 
   /**
    * Take a raw hex string representing the program and execute it.
@@ -201,6 +202,46 @@ var MMU = {
         byte_buffer = [];      
       } 
     }    
+  }
+};
+
+var PHK = {
+  bytes_required:function() {
+    return 1;
+  },
+  execute:function(cpu) {
+    cpu.mmu.store_byte(cpu.r.s--, cpu.r.pbr);
+  }
+};
+
+var PHD = {
+  bytes_required:function() {
+    return 1;
+  },
+  execute:function(cpu) {
+    var low_byte = cpu.r.d & 0x00ff;
+    var high_byte = cpu.r.d >> 8;
+    cpu.mmu.store_byte(cpu.r.s--, high_byte);
+    cpu.mmu.store_byte(cpu.r.s--, low_byte);  
+  }
+};
+
+var PLD = {
+  bytes_required:function() {
+    return 1;
+  },
+  execute:function(cpu) {
+    var low_byte = cpu.mmu.read_byte(++cpu.r.s);
+    var high_byte = cpu.mmu.read_byte(++cpu.r.s);
+    cpu.r.d = (high_byte<<8)|low_byte;
+    
+    cpu.p.n = cpu.r.d >> 15;  
+
+    if(cpu.r.d===0) {
+      cpu.p.z = 1;
+    } else {
+      cpu.p.z = 0;
+    }
   }
 };
 
