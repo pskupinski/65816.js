@@ -123,7 +123,8 @@ function CPU_65816() {
                       0x6e : ROR_absolute, 0x66 : ROR_direct_page,
                       0x7e : ROR_absolute_indexed_x,
                       0x76 : ROR_direct_page_indexed_x,
-                      0x48 : PHA , 0x68 : PLA };
+                      0x48 : PHA , 0x68 : PLA, 0x5a : PHY, 0x7a : PLY,
+                      0xda : PHX, 0xfa : PLX };
 
   /**
    * Take a raw hex string representing the program and execute it.
@@ -199,6 +200,84 @@ var MMU = {
         byte_buffer = [];      
       } 
     }    
+  }
+};
+
+var PHX = {
+  bytes_required:function() {
+    return 1;
+  },
+  execute:function(cpu) {
+    if(cpu.p.x) {
+      cpu.mmu.store_byte(cpu.r.s--, cpu.r.x);
+    } else {
+      var low_byte = cpu.r.x & 0x00ff;
+      var high_byte = cpu.r.x >> 8;
+      cpu.mmu.store_byte(cpu.r.s--, high_byte);
+      cpu.mmu.store_byte(cpu.r.s--, high_byte);
+    }
+  }
+};
+
+var PLX = {
+  bytes_required:function() {
+    return 1;
+  },
+  execute:function(cpu) {
+    if(cpu.p.x) {
+      cpu.r.x = cpu.mmu.read_byte(++cpu.r.s);    
+      cpu.p.n = cpu.r.x >> 7;
+    } else {
+      var low_byte = cpu.mmu.read_byte(++cpu.r.s);
+      var high_byte = cpu.mmu.read_byte(++cpu.r.s);  
+      cpu.r.x = (high_byte<<8)|low_byte;
+      cpu.p.n = cpu.r.x >> 15;
+    }
+   
+    if(cpu.r.x===0) {
+      cpu.p.z = 1;
+    } else {
+      cpu.p.z = 0;
+    }
+  }
+};
+
+var PHY = {
+  bytes_required:function() {
+    return 1;
+  },
+  execute:function(cpu) {
+    if(cpu.p.x) {
+      cpu.mmu.store_byte(cpu.r.s--, cpu.r.y);
+    } else {
+      var low_byte = cpu.r.y & 0x00ff;
+      var high_byte = cpu.r.y >> 8;
+      cpu.mmu.store_byte(cpu.r.s--, high_byte);
+      cpu.mmu.store_byte(cpu.r.s--, high_byte);
+    }
+  }
+};
+
+var PLY = {
+  bytes_required:function() {
+    return 1;
+  },
+  execute:function(cpu) {
+    if(cpu.p.x) {
+      cpu.r.y = cpu.mmu.read_byte(++cpu.r.s);    
+      cpu.p.n = cpu.r.y >> 7;
+    } else {
+      var low_byte = cpu.mmu.read_byte(++cpu.r.s);
+      var high_byte = cpu.mmu.read_byte(++cpu.r.s);  
+      cpu.r.y = (high_byte<<8)|low_byte;
+      cpu.p.n = cpu.r.y >> 15;
+    }
+   
+    if(cpu.r.y===0) {
+      cpu.p.z = 1;
+    } else {
+      cpu.p.z = 0;
+    }
   }
 };
 
