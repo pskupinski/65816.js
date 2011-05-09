@@ -17,15 +17,15 @@
 function CPU_65816() {
   // Registers
   this.r = {
-    a:0,   // Accumulator
-    b:0,   // "Hidden" Accumulator Register(high byte in 8-bit mode)
-    x:0,   // X Index Register
-    y:0,   // Y Index Register
-    d:0,   // Direct Page Register
-    s:0,   // Stack Pointer
-    pc:0,  // Program Counter
-    dbr:0, // Data Bank Register
-    pbr:0  // Program Bank Register
+    a:0,     // Accumulator
+    b:0,     // "Hidden" Accumulator Register(high byte in 8-bit mode)
+    x:0,     // X Index Register
+    y:0,     // Y Index Register
+    d:0,     // Direct Page Register
+    s:0x1ff, // Stack Pointer
+    pc:0,    // Program Counter
+    dbr:0,   // Data Bank Register
+    pbr:0    // Program Bank Register
   };
 
   // P register flags. 
@@ -122,7 +122,8 @@ function CPU_65816() {
                       0x36 : ROL_direct_page_indexed_x, 0x6a : ROR_accumulator,
                       0x6e : ROR_absolute, 0x66 : ROR_direct_page,
                       0x7e : ROR_absolute_indexed_x,
-                      0x76 : ROR_direct_page_indexed_x };
+                      0x76 : ROR_direct_page_indexed_x,
+                      0x48 : PHA , 0x68 : PLA };
 
   /**
    * Take a raw hex string representing the program and execute it.
@@ -198,6 +199,45 @@ var MMU = {
         byte_buffer = [];      
       } 
     }    
+  }
+};
+
+var PHA = {
+  bytes_required:function() {
+    return 1;
+  },
+  execute:function(cpu) {
+    if(cpu.p.m) {
+      cpu.mmu.store_byte(cpu.r.s--, cpu.r.a);
+    } else {
+      var low_byte = cpu.r.a & 0x00ff;
+      var high_byte = cpu.r.a >> 8;
+      cpu.mmu.store_byte(cpu.r.s--, high_byte);
+      cpu.mmu.store_byte(cpu.r.s--, low_byte);
+    }
+  }
+};
+
+var PLA = {
+  bytes_required:function() {
+    return 1;
+  },
+  execute:function(cpu) {
+    if(cpu.p.m) {
+      cpu.r.a = cpu.mmu.read_byte(++cpu.r.s);    
+      cpu.p.n = cpu.r.a >> 7;
+    } else {
+      var low_byte = cpu.mmu.read_byte(++cpu.r.s);
+      var high_byte = cpu.mmu.read_byte(++cpu.r.s);  
+      cpu.r.a = (high_byte<<8)|low_byte;
+      cpu.p.n = cpu.r.a >> 15;
+    }
+   
+    if(cpu.r.a===0) {
+      cpu.p.z = 1;
+    } else {
+      cpu.p.z = 0;
+    }
   }
 };
 
