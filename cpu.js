@@ -126,7 +126,7 @@ function CPU_65816() {
                       0x48 : PHA, 0x68 : PLA, 0x5a : PHY, 0x7a : PLY,
                       0xda : PHX, 0xfa : PLX, 0x08 : PHP, 0x28 : PLP, 
                       0xf4 : PEA, 0xd4 : PEI, 0x8b : PHB, 0xab : PLB,
-                      0x4b : PHK, 0x0b : PHD, 0x2b : PLD };
+                      0x4b : PHK, 0x0b : PHD, 0x2b : PLD, 0x62 : PER };
 
   /**
    * Take a raw hex string representing the program and execute it.
@@ -202,6 +202,19 @@ var MMU = {
         byte_buffer = [];      
       } 
     }    
+  }
+};
+
+var PER = {
+  bytes_required:function() {
+    return 3;
+  },
+  execute:function(cpu,bytes) {
+    var address = ((bytes[1]<<8)|bytes[0]) + cpu.r.pc;
+    var low_byte = address & 0x00ff;
+    var high_byte = address >> 8;
+    cpu.mmu.store_byte(cpu.r.s--, high_byte);
+    cpu.mmu.store_byte(cpu.r.s--, low_byte); 
   }
 };
 
