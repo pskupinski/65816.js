@@ -140,7 +140,7 @@ function CPU_65816() {
 
     var executing = true;
     while(executing) {
-      var b = this.mmu.read_byte(this.r.pc); 
+      var b = this.mmu.read_byte_long(this.r.pc, this.r.pbr); 
       this.r.pc++;
 
       // If we reach the end of the code then stop everything.
