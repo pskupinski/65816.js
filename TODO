@@ -5,11 +5,11 @@ Testing:
 - Tests needed for LD* and ST* operations
 - Tests needed for IN* and DE* operations
 - Tests needed for T** transfer operations
+- Tests needed for the numerous other operations added
 CPU:
-- Stack operations and stack support in general
 - Subroutines
 - Decimal mode support
-- Emulation mode support in general.
+- Emulation mode support
 - Have each operation return the number of cycles used by the execute function.
 - Implement the rest of the missing operations.
 Memory:
