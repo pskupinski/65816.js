@@ -44,10 +44,10 @@ function CPU_65816() {
   this.mmu = MMU;
   this.mmu.cpu = this; 
 
-  this.opcode_map = { 0xfb : XCE, 0x18 : CLC, 0x78 : SEI, 0x38 : SEC, 
-                      0x58 : CLI, 0xc2 : REP, 0xe2 : SEP, 
-                      0xa9 : LDA_const, 0xad : LDA_absolute, 
-                      0xaf : LDA_absolute_long,
+  this.opcode_map = { 0xfb : XCE, 0x18 : CLC, 0x78 : SEI, 0x38 : SEC,
+                      0x58 : CLI, 0xc2 : REP, 0xe2 : SEP, 0xd8 : CLD,
+                      0xf8 : SED, 0xb8 : CLV, 0xa9 : LDA_const, 
+                      0xad : LDA_absolute, 0xaf : LDA_absolute_long, 
                       0xa5 : LDA_direct_page, 0xbd : LDA_absolute_indexed_x,
                       0xb9 : LDA_absolute_indexed_y,
                       0xb2 : LDA_direct_page_indirect,
@@ -3327,5 +3327,32 @@ var SEC = {
   bytes_required: function() { return 1; },
   execute: function(cpu) {
     cpu.p.c = 1;
+  }
+};
+
+var CLD = {
+  bytes_required:function() {
+    return 1;
+  },
+  execute:function(cpu) {
+    cpu.p.d = 0;
+  }
+};
+
+var SED = {
+  bytes_required:function() {
+    return 1;
+  },
+  execute:function(cpu) {
+    cpu.p.d = 1;
+  }
+};
+
+var CLV = {
+  bytes_required:function() {
+    return 1;
+  },
+  execute:function(cpu) {
+    cpu.p.v = 0;
   }
 };
