@@ -127,7 +127,8 @@ function CPU_65816() {
                       0xda : PHX, 0xfa : PLX, 0x08 : PHP, 0x28 : PLP, 
                       0xf4 : PEA, 0xd4 : PEI, 0x8b : PHB, 0xab : PLB,
                       0x4b : PHK, 0x0b : PHD, 0x2b : PLD, 0x62 : PER,
-                      0x20 : JSR, 0x60 : RTS, 0x22 : JSL, 0x6b : RTL };
+                      0x20 : JSR, 0x60 : RTS, 0x22 : JSL, 0x6b : RTL,
+                      0x54 : MVN, 0x44 : MVP };
 
   /**
    * Take a raw hex string representing the program and execute it.
@@ -203,6 +204,90 @@ var MMU = {
         byte_buffer = [];      
       } 
     }    
+  }
+};
+
+// MVN is a really weird instruction, until the accumulator underflows MVN
+// will keep decrementing the program counter to have it continue to execute.
+var MVN = {
+  bytes_required:function() {
+    return 3;
+  },
+  execute:function(cpu, bytes) {
+    // TODO: One piece of reference material I've read claims that this 
+    // operation should always work with a 16-bit accumulator even if in 
+    // emulation mode or the m bit is set to 1, in those cases it claims that
+    // you should concatenate the B "hidden" register with A.  I'm going to
+    // need to test this claim out somehow.
+    var b = cpu.mmu.read_byte_long(cpu.r.x,bytes[1]);
+    cpu.r.dbr = bytes[0];
+    cpu.mmu.store_byte(cpu.r.y, b); 
+    cpu.r.x++;
+    cpu.r.y++;
+    if(cpu.p.x) {
+      cpu.r.x &= 0x00ff;
+      cpu.r.y &= 0x00ff;
+    } else {
+      cpu.r.x &= 0xffff;
+      cpu.r.y &= 0xffff;
+    }
+   
+    if(cpu.r.a!=0) {
+      cpu.r.a--;
+      cpu.r.pc-=3;
+    } else {
+      if(cpu.p.m)
+        cpu.r.a = 0xff; 
+      else
+        cpu.r.a = 0xffff;
+    }
+  }
+};
+
+// MVP is a really weird instruction, until the accumulator reaches $FFFF MVP
+// will keep decrementing the program counter to have it continue to execute.
+var MVP = {
+  bytes_required:function() {
+    return 3;
+  },
+  execute:function(cpu, bytes) {
+    // TODO: One piece of reference material I've read claims that this 
+    // operation should always work with a 16-bit accumulator even if in 
+    // emulation mode or the m bit is set to 1, in those cases it claims that
+    // you should concatenate the B "hidden" register with A.  I'm going to
+    // need to test this claim out somehow.
+    var b = cpu.mmu.read_byte_long(cpu.r.x,bytes[1]);
+    cpu.r.dbr = bytes[0];
+    cpu.mmu.store_byte(cpu.r.y,b); 
+
+    var index_register_wrap;
+    if(cpu.p.x) {
+      index_register_wrap = 0xff;
+    } else {
+      index_register_wrap = 0xffff;
+    }
+
+    if(cpu.r.y===index_register_wrap) {
+      cpu.r.y = 0;  
+    } else {
+      cpu.r.y--;
+    }
+
+    if(cpu.r.x===index_register_wrap) {
+      cpu.r.x = 0;
+    } else {
+      cpu.r.x--;
+    }
+   
+    if(cpu.r.a!=0) {
+      cpu.r.pc-=3;
+      cpu.r.a--;
+    } else {
+      if(cpu.p.m)
+        cpu.r.a = 0xff; 
+      else
+        cpu.r.a = 0xffff;
+    }
   }
 };
 

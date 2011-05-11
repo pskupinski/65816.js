@@ -22,6 +22,27 @@ function run_tests() {
   test_sbc();
   test_cmp();
   test_subroutines();
+  test_mvn_and_mvp();
+}
+
+function test_mvn_and_mvp() {
+  test("Test a short example program for MVP", function() {
+    var cpu = new CPU_65816();
+    cpu.execute("18fbe230a9ab8dff0fa9cd8d0010c230a90100a20010a00020440000");
+    equals(cpu.r.a, 0xffff, "After executing the example program the "+
+                            "accumulator should've underflowed and "+
+                            "resulted in 0xffff.");
+    equals(cpu.r.x, 0x0ffe, "After executing the example program the x "+
+                            "register should be 0x0ffe.");
+    equals(cpu.r.y, 0x1ffe, "After executing the example program the y "+
+                            "register should be 0x1ffe.");  
+    var byte_one = cpu.mmu.read_byte(0x1fff);
+    var byte_two = cpu.mmu.read_byte(0x2000);
+    equals(byte_one, 0xab,  "After executing the example program 0x001fff "+
+                            "in memory should contain 0xab.");
+    equals(byte_two, 0xcd,  "After executing the example program 0x002000 "+
+                            "in memory should contain 0xcd.");
+  });
 }
 
 function test_subroutines() {
