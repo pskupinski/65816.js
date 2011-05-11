@@ -181,7 +181,7 @@ var MMU = {
   read_byte_long: function(location, bank) {
     return this.memory[bank][location];
   },
- 
+
   store_byte: function(location, b) {
     this.memory[this.cpu.r.dbr][location] = b;       
   },
@@ -1617,7 +1617,7 @@ var CMP_absolute = {
 
 var SBC_const = {
   bytes_required:function(cpu) {
-    if(cpu.p.m) {
+    if(cpu.p.e|cpu.p.m) {
       return 2;
     } else {
       return 3;
@@ -1625,7 +1625,7 @@ var SBC_const = {
   },
   execute:function(cpu, bytes) {
     var old_a = cpu.r.a;
-    if(cpu.p.m) {
+    if(cpu.p.e|cpu.p.m) {
       cpu.r.a -= bytes[0] - cpu.p.c;
       if(cpu.r.a < 0) {
         cpu.p.c = 0; 
@@ -1678,7 +1678,7 @@ var SBC_direct_page = {
   },
   execute:function(cpu, bytes) {
     var location = bytes[0] + cpu.r.d;
-    if(cpu.p.m) {
+    if(cpu.p.e|cpu.p.m) {
       SBC_const.execute(cpu, [cpu.mmu.read_byte(location)]); 
     } else {
       var low_byte = cpu.mmu.read_byte(location);
@@ -1694,7 +1694,7 @@ var SBC_absolute = {
   },
   execute:function(cpu, bytes) {
     var location = (bytes[1]<<8)|bytes[0];
-    if(cpu.p.m) {
+    if(cpu.p.e|cpu.p.m) {
       SBC_const.execute(cpu, [cpu.mmu.read_byte(location)]);
     } else {
       var low_byte = cpu.mmu.read_byte(location);
@@ -1713,7 +1713,7 @@ var SBC_direct_page_indirect = {
     var low_byte_loc = cpu.mmu.read_byte(location);
     var high_byte_loc = cpu.mmu.read_byte(location+1);
     var absolute_location = (high_byte_loc<<8) | low_byte_loc;
-    if(cpu.p.m) {
+    if(cpu.p.e|cpu.p.m) {
       SBC_const.execute(cpu, [cpu.mmu.read_byte(absolute_location)]);
     } else {
       var low_byte = cpu.mmu.read_byte(absolute_location);
@@ -1778,7 +1778,7 @@ var SBC_direct_page_indirect = {
 
 var ADC_const = {
   bytes_required:function(cpu) {
-    if(cpu.p.m) {
+    if(cpu.p.e|cpu.p.m) {
       return 2;
     } else {
       return 3;
@@ -1786,7 +1786,7 @@ var ADC_const = {
   },
   execute:function(cpu, bytes) {
     var old_a = cpu.r.a; 
-    if(cpu.p.m) {
+    if(cpu.p.e|cpu.p.m) {
       cpu.r.a += bytes[0] + cpu.p.c;
       if(cpu.r.a & 0x100) {
         cpu.p.c = 1;
@@ -1839,7 +1839,7 @@ var ADC_absolute = {
   },
   execute:function(cpu, bytes) {
     var location = (bytes[1]<<8)|bytes[0];
-    if(cpu.p.m) {
+    if(cpu.p.e|cpu.p.m) {
       ADC_const.execute(cpu, [cpu.mmu.read_byte(location)]);
     } else {
       var low_byte = cpu.mmu.read_byte(location);
@@ -1855,7 +1855,7 @@ var ADC_direct_page = {
   },
   execute:function(cpu, bytes) {
     var location = bytes[0] + cpu.r.d;
-    if(cpu.p.m) {
+    if(cpu.p.e|cpu.p.m) {
       ADC_const.execute(cpu, [cpu.mmu.read_byte(location)]);
     } else {
       var low_byte = cpu.mmu.read_byte(location);
@@ -1874,7 +1874,7 @@ var ADC_direct_page_indirect = {
     var low_byte_loc = cpu.mmu.read_byte(location);
     var high_byte_loc = cpu.mmu.read_byte(location+1);
     var absolute_location = (high_byte_loc<<8) | low_byte_loc;
-    if(cpu.p.m) {
+    if(cpu.p.e|cpu.p.m) {
       ADC_const.execute(cpu, [cpu.mmu.read_byte(absolute_location)]);
     } else {
       var low_byte = cpu.mmu.read_byte(absolute_location);
@@ -2459,13 +2459,13 @@ var NOP = {
 
 var LDY_const = {
   bytes_required:function(cpu) {
-    if(cpu.p.x===0)
-      return 3;
-    else
+    if(cpu.p.e|cpu.p.x)
       return 2;
+    else
+      return 3;
   },
   execute:function(cpu, bytes) {
-    if(cpu.p.x) {
+    if(cpu.p.e|cpu.p.x) {
       cpu.r.y = bytes[0]; 
       cpu.p.n = cpu.r.y >> 7;
     } else {
@@ -2543,7 +2543,7 @@ var LDY_absolute = {
   },
   execute:function(cpu, bytes) {
     var location = (bytes[1]<<8)|bytes[0];
-    if(cpu.p.x) {
+    if(cpu.p.e|cpu.p.x) {
       cpu.r.y = cpu.mmu.read_byte(location);
       cpu.p.n = cpu.r.y >> 7;
     } else {
@@ -2566,7 +2566,7 @@ var LDY_direct_page = {
   },
   execute:function(cpu, bytes) {
     var location = bytes[0] + cpu.r.d; 
-    if(cpu.p.x) {
+    if(cpu.p.e|cpu.p.x) {
       cpu.r.y = cpu.mmu.read_byte(location);
       cpu.p.n = cpu.r.y >> 7;
     } else {
@@ -2650,7 +2650,7 @@ var DEC_accumulator = {
   },
   execute: function(cpu) {
     if(cpu.r.a===0) {
-      if(cpu.p.x) {
+      if(cpu.p.e|cpu.p.x) {
         cpu.r.a = 0xff;
       } else {
         cpu.r.a = 0xffff;
@@ -2659,7 +2659,7 @@ var DEC_accumulator = {
       cpu.p.z = 0;
     } else {
       cpu.r.a--; 
-      if(cpu.p.x) {
+      if(cpu.p.e|cpu.p.x) {
         cpu.r.a &= 0xff;   
         cpu.p.n = cpu.r.a >> 7;
       } else {
@@ -2683,7 +2683,7 @@ var DEC_absolute = {
   execute: function(cpu, bytes) {
     var location = (bytes[1]<<8)|bytes[0]
     var temp;
-    if(cpu.p.m) {
+    if(cpu.p.e|cpu.p.m) {
       temp = cpu.mmu.read_byte(location);
       if(temp===0) {
         cpu.mmu.store_byte(location, 0xff);
@@ -2731,7 +2731,7 @@ var DEC_direct_page = {
   execute: function(cpu, bytes) {
     var location = bytes[0] + cpu.r.d;
     var temp;
-    if(cpu.p.m) {
+    if(cpu.p.e|cpu.p.m) {
       temp = cpu.mmu.read_byte(location);
       if(temp===0) {
         cpu.mmu.store_byte(location, 0xff);
@@ -2779,7 +2779,7 @@ var INX = {
   execute:function(cpu) {
     cpu.r.x++;
     
-    if(cpu.p.x) {
+    if(cpu.p.e|cpu.p.x) {
       cpu.r.x &= 0xff;
       cpu.p.n = cpu.r.x >> 7;
     } else {
@@ -2801,7 +2801,7 @@ var INY = {
   },
   execute:function(cpu) {
     cpu.r.y++;
-    if(cpu.p.x) {
+    if(cpu.p.e|cpu.p.x) {
       cpu.r.y &= 0xff;
       cpu.p.n = cpu.r.y >> 7;
     } else {
@@ -2823,7 +2823,7 @@ var INC_accumulator = {
   },
   execute: function(cpu) {
     cpu.r.a++; 
-    if(cpu.p.m) {
+    if(cpu.p.e|cpu.p.m) {
       cpu.r.a &= 0xff;
       cpu.p.n = cpu.r.a >> 7;
     } else {
@@ -2846,7 +2846,7 @@ var INC_absolute = {
   execute: function(cpu, bytes) {
     var location = (bytes[1]<<8)|bytes[0]
     var temp;
-    if(cpu.p.m) {
+    if(cpu.p.e|cpu.p.m) {
       temp = cpu.mmu.read_byte(location) + 1; 
       temp &= 0xff;
       cpu.p.n = temp >> 7;
@@ -2882,7 +2882,7 @@ var INC_direct_page = {
   execute: function(cpu, bytes) {
     var location = bytes[0] + cpu.r.d;
     var temp;
-    if(cpu.p.m) {
+    if(cpu.p.e|cpu.p.m) {
       temp = cpu.mmu.read_byte(location) + 1; 
       temp &= 0xff;
       cpu.mmu.store_byte(location, temp);
@@ -2945,7 +2945,7 @@ var STA_direct_page = {
   },
   execute: function(cpu, bytes) {
     var location = bytes[0]+cpu.p.d;
-    if(cpu.p.m) {
+    if(cpu.p.e|cpu.p.m) {
       cpu.mmu.store_byte(location, cpu.r.a);
     } else {
       var high_byte = cpu.r.a >> 8;
@@ -3137,7 +3137,7 @@ var STA_absolute = {
   },
   execute: function(cpu, bytes) {
     var location = (bytes[1]<<8)|bytes[0];
-    if(cpu.p.m) {
+    if(cpu.p.e|cpu.p.m) {
       cpu.mmu.store_byte(location, cpu.r.a);
     } else {
       var high_byte = cpu.r.a >> 8;
@@ -3154,7 +3154,7 @@ var LDX_direct_page = {
   },
   execute: function(cpu, bytes) {
     var location = cpu.r.d + bytes[0];
-    if(cpu.p.x) {
+    if(cpu.p.e|cpu.p.x) {
       cpu.r.x = cpu.mmu.read_byte(location);
       cpu.p.n = cpu.r.x >> 7;
     } else {
@@ -3212,7 +3212,7 @@ var LDA_direct_page = {
   },
   execute: function(cpu, bytes) {
     var location = bytes[0] + cpu.r.d; 
-    if(cpu.p.m) {
+    if(cpu.p.e|cpu.p.m) {
       cpu.r.a = cpu.mmu.read_byte(location);
       cpu.p.n = cpu.r.a >> 7;
     } else {
@@ -3258,7 +3258,7 @@ var LDX_absolute = {
   },
   execute: function(cpu, bytes) {
     var location = (bytes[1]<<8)|bytes[0];
-    if(cpu.p.x) {
+    if(cpu.p.e|cpu.p.x) {
       cpu.r.x = cpu.mmu.read_byte(location);
       cpu.p.n = cpu.r.x >> 7;
     } else {
@@ -3304,7 +3304,7 @@ var LDA_absolute = {
   },
   execute: function(cpu, bytes) {
     var location = (bytes[1]<<8)|bytes[0];
-    if(cpu.p.m===1) {
+    if(cpu.p.e|cpu.p.m) {
       cpu.r.a = cpu.mmu.read_byte(location);
       cpu.p.n = cpu.r.a >> 7;
     } else {
@@ -3323,19 +3323,19 @@ var LDA_absolute = {
 
 var LDA_const = {
   bytes_required: function(cpu) {
-    if(cpu.p.m===0) {
-      return 3;
-    } else {
+    if(cpu.p.e|cpu.p.m) {
       return 2;
+    } else {
+      return 3;
     }
   },
   execute: function(cpu, bytes) {
-    if(cpu.p.m===0) {
-      cpu.r.a = (bytes[1]<<8)|bytes[0];  
-      cpu.p.n = cpu.r.a >> 15;
-    } else {
+    if(cpu.p.e|cpu.p.m) {
       cpu.r.a = bytes[0];  
       cpu.p.n = cpu.r.a >> 7;
+    } else {
+      cpu.r.a = (bytes[1]<<8)|bytes[0];  
+      cpu.p.n = cpu.r.a >> 15;
     }
     if(cpu.r.a===0) {
       cpu.p.z = 1;      
@@ -3347,21 +3347,21 @@ var LDA_const = {
 
 var LDX_const = {
   bytes_required: function(cpu) { 
-    if(cpu.p.x===0) { 
-      return 3; 
+    if(cpu.p.e|cpu.p.x) { 
+      return 2; 
     } else { 
-      return 2;
+      return 3;
     }
   },
   execute: function(cpu, bytes) {
     var constant;
-    if(cpu.p.x===0) {
-      cpu.r.x = (bytes[1]<<8)|bytes[0];  
-      cpu.p.n = cpu.r.x >> 15;
-    } else {
+    if(cpu.p.e|cpu.p.x) {
       cpu.r.x = bytes[0];  
       cpu.p.n = cpu.r.x >> 7;
-    }
+    } else {
+      cpu.r.x = (bytes[1]<<8)|bytes[0];  
+      cpu.p.n = cpu.r.x >> 15;
+    } 
     if(cpu.r.x===0) {
       cpu.p.z = 1; 
     } else {
