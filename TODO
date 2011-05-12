@@ -7,13 +7,17 @@ Testing:
 - Tests needed for T** transfer operations
 - Tests needed for the numerous other operations added
 CPU:
+- Implement complex addressing modes for many operations
 - Interrupts
 - Decimal mode support
-- Emulation mode support
+- Better emulation mode support
 - Have each operation return the number of cycles used by the execute function.
 - Implement the rest of the missing operations.
 Memory:
-- Banks
+- Bank wrapping or not wrapping for certain addressing modes and with certain
+  settings
+- Page wrapping or not wrapping for certain addressing modes and with certain
+  settings
 - ROM protection
 - Memory mapped I/O
 Display:
