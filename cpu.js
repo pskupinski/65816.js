@@ -22,10 +22,10 @@ function CPU_65816() {
     x:0,     // X Index Register
     y:0,     // Y Index Register
     d:0,     // Direct Page Register
-    s:0x1ff, // Stack Pointer
+    s:0xff, // Stack Pointer
     pc:0,    // Program Counter
     dbr:0,   // Data Bank Register
-    k:0     // Program Bank Register
+    k:0      // Program Bank Register
   };
 
   // P register flags. 
@@ -175,19 +175,26 @@ var MMU = {
   memory: { 0: {} },
 
   pull_byte: function() {
-    if(this.cpu.p.e&&(this.cpu.r.s===0x1ff)) {
-      this.cpu.r.s = 0x100;
-      return this.memory[this.cpu.r.dbr][this.cpu.r.s]; 
+    if(this.cpu.p.e) {
+      if(this.cpu.r.s===0xff) {
+        this.cpu.r.s = 0;
+        return this.memory[this.cpu.r.dbr][0x100|this.cpu.r.s]; 
+      } else {
+        return this.memory[this.cpu.r.dbr][0x100|(++this.cpu.r.s)];
+      }
     } else {
       return this.memory[this.cpu.r.dbr][++this.cpu.r.s];
     }
   },
 
   push_byte: function(b) {
-    if(this.cpu.p.e&&(this.cpu.r.s===0x100)) {
-      var result = this.memory[this.cpu.r.dbr][this.cpu.r.s];
-      this.cpu.r.s = 0x1ff;
-      return result;
+    if(this.cpu.p.e) {
+      if(this.cpu.r.s===0) {
+        this.memory[this.cpu.r.dbr][0x100|this.cpu.r.s] = b;
+        this.cpu.r.s = 0xff;
+      } else {
+        this.memory[this.cpu.r.dbr][0x100|(this.cpu.r.s--)] = b;
+      }
     } else {
       this.memory[this.cpu.r.dbr][this.cpu.r.s--] = b;
     }
@@ -3463,9 +3470,13 @@ var XCE = {
       var low_byte = cpu.r.a & 0x00ff;
       cpu.r.a = low_byte;
       cpu.r.b = high_byte;
+      cpu.r.s &= 0xff;
     } else {
       // Switching to native mode. 
       cpu.r.a = (cpu.r.b<<8) | cpu.r.a;
+      cpu.p.m = 1;
+      cpu.p.x = 1;
+      cpu.r.s |= 0x100;
     }
   } 
 };

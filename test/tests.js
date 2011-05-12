@@ -32,8 +32,8 @@ function test_emulation_mode() {
        "causes the stack register to pull from 0x100.", function() {
     var cpu = new CPU_65816();
     cpu.execute("a9fe8d0001a90068");
-    equals(cpu.r.s, 0x100, "The stack register should be 0x100 after the "+
-                           "pull operation.");
+    equals(cpu.r.s, 0, "The stack register should be 0 after the pull "+
+                       "operation.");
     equals(cpu.r.a, 0xfe,  "The accumulator should be 0xfe after the pull "+
                            "operation."); 
   });
