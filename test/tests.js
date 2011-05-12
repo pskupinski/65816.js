@@ -23,9 +23,24 @@ function run_tests() {
   test_cmp();
   test_subroutines();
   test_mvn_and_mvp();
+  test_emulation_mode();
+}
+
+function test_emulation_mode() {
+  module("Emulation Mode");
+  test("Make sure pulling from the stack when the stack register is at 0x1ff"+
+       "causes the stack register to pull from 0x100.", function() {
+    var cpu = new CPU_65816();
+    cpu.execute("a9fe8d0001a90068");
+    equals(cpu.r.s, 0x100, "The stack register should be 0x100 after the "+
+                           "pull operation.");
+    equals(cpu.r.a, 0xfe,  "The accumulator should be 0xfe after the pull "+
+                           "operation."); 
+  });
 }
 
 function test_mvn_and_mvp() {
+  module("MVN and MVP");
   test("Test a short example program for MVP", function() {
     var cpu = new CPU_65816();
     cpu.execute("18fbe230a9ab8dff0fa9cd8d0010c230a90100a20010a00020440000");

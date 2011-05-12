@@ -175,11 +175,22 @@ var MMU = {
   memory: { 0: {} },
 
   pull_byte: function() {
-    return this.memory[this.cpu.r.dbr][++this.cpu.r.s];
+    if(this.cpu.p.e&&(this.cpu.r.s===0x1ff)) {
+      this.cpu.r.s = 0x100;
+      return this.memory[this.cpu.r.dbr][this.cpu.r.s]; 
+    } else {
+      return this.memory[this.cpu.r.dbr][++this.cpu.r.s];
+    }
   },
 
   push_byte: function(b) {
-    this.memory[this.cpu.r.dbr][this.cpu.r.s--] = b;
+    if(this.cpu.p.e&&(this.cpu.r.s===0x100)) {
+      var result = this.memory[this.cpu.r.dbr][this.cpu.r.s];
+      this.cpu.r.s = 0x1ff;
+      return result;
+    } else {
+      this.memory[this.cpu.r.dbr][this.cpu.r.s--] = b;
+    }
   },
 
   read_byte: function(location) {
