@@ -77,7 +77,7 @@ function CPU_65816() {
                       0x74 : STZ_direct_page_indexed_x, 0x9b : TXY,
                       0xbb : TYX, 0xaa : TAX, 0xa8 : TAY, 0x8a : TXA, 
                       0x98 : TYA, 0x4c : JMP_absolute, 
-                      0x6c : JMP_absolute_indirect, 0x80 : BRA,
+                      0x6c : JMP_absolute_indirect, 0x80 : BRA, 0x82 : BRL,
                       0xf0 : BEQ, 0xd0 : BNE, 0x90 : BCC, 0xb0 : BCS,
                       0x50 : BVC, 0x70 : BVS, 0x10 : BPL, 0x30 : BMI,
                       0x69 : ADC_const, 0x6d : ADC_absolute, 
@@ -2073,6 +2073,22 @@ var BRA = {
     }
   }
 };
+
+var BRL = {
+  bytes_required:function() {
+    return 3;
+  },
+  execute:function(cpu, bytes) {
+    // Handle double byte two's complement numbers as the branch argument.
+    var num = (bytes[1]<<8)|bytes[0];
+    if(num<=32767) {
+      cpu.r.pc+=num;
+    } else {
+      cpu.r.pc-=65536-num;
+    }
+  }
+};
+
 
 var JMP_absolute_indirect = {
   bytes_required:function() {
