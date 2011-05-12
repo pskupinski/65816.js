@@ -25,7 +25,7 @@ function CPU_65816() {
     s:0x1ff, // Stack Pointer
     pc:0,    // Program Counter
     dbr:0,   // Data Bank Register
-    pbr:0    // Program Bank Register
+    k:0     // Program Bank Register
   };
 
   // P register flags. 
@@ -143,7 +143,7 @@ function CPU_65816() {
 
     var executing = true;
     while(executing) {
-      var b = this.mmu.read_byte_long(this.r.pc, this.r.pbr); 
+      var b = this.mmu.read_byte_long(this.r.pc, this.r.k); 
       this.r.pc++;
 
       // If we reach the end of the code then stop everything.
@@ -318,10 +318,10 @@ var JSL = {
     var location = cpu.r.pc - 1;
     var low_byte = location & 0x00ff;
     var high_byte = location >> 8;
-    cpu.mmu.push_byte(cpu.r.pbr);
+    cpu.mmu.push_byte(cpu.r.k);
     cpu.mmu.push_byte(high_byte);
     cpu.mmu.push_byte(low_byte);
-    cpu.r.pbr = bytes[2];
+    cpu.r.k = bytes[2];
     cpu.r.pc = (bytes[1]<<8)|bytes[0];
   }
 };
@@ -333,7 +333,7 @@ var RTL = {
   execute:function(cpu) {
     var low_byte = cpu.mmu.pull_byte();
     var high_byte = cpu.mmu.pull_byte();
-    cpu.r.pbr = cpu.mmu.pull_byte();
+    cpu.r.k = cpu.mmu.pull_byte();
     cpu.r.pc = ((high_byte<<8)|low_byte) + 1;
   }
 };
@@ -381,7 +381,7 @@ var PHK = {
     return 1;
   },
   execute:function(cpu) {
-    cpu.mmu.push_byte(cpu.r.pbr);
+    cpu.mmu.push_byte(cpu.r.k);
   }
 };
 
