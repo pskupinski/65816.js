@@ -46,7 +46,7 @@ function CPU_65816() {
 
   this.opcode_map = { 0xfb : XCE, 0x18 : CLC, 0x78 : SEI, 0x38 : SEC,
                       0x58 : CLI, 0xc2 : REP, 0xe2 : SEP, 0xd8 : CLD,
-                      0xf8 : SED, 0xb8 : CLV, 0xa9 : LDA_const, 
+                      0xf8 : SED, 0xb8 : CLV, 0xeb : XBA, 0xa9 : LDA_const, 
                       0xad : LDA_absolute, 0xaf : LDA_absolute_long, 
                       0xa5 : LDA_direct_page, 0xbd : LDA_absolute_indexed_x,
                       0xb9 : LDA_absolute_indexed_y,
@@ -3623,5 +3623,36 @@ var CLV = {
   },
   execute:function(cpu) {
     cpu.p.v = 0;
+  }
+};
+
+var XBA = {
+  bytes_required:function() {
+    return 1;
+  },
+  execute:function(cpu) {
+    if(cpu.p.e|cpu.p.m) {
+      var old_a = cpu.r.a;
+      cpu.r.a = cpu.r.b;
+      cpu.r.b = old_a;
+
+      cpu.p.n = cpu.r.a >> 7;
+      if(cpu.r.a===0) {
+        cpu.p.z = 1;
+      } else {
+        cpu.p.z = 0;
+      }
+    } else {
+      var low_byte = cpu.r.a & 0xff;
+      var high_byte = cpu.r.a >> 8;
+      cpu.r.a = (low_byte<<8)|high_byte;
+     
+      cpu.p.n = high_byte >> 7; 
+      if(high_byte===0) {
+        cpu.p.z = 1;
+      } else {
+        cpu.p.z = 0;
+      }
+    }
   }
 };
