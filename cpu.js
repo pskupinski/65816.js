@@ -76,7 +76,8 @@ function CPU_65816() {
                       0x9e : STZ_absolute_indexed_x,
                       0x74 : STZ_direct_page_indexed_x, 0x9b : TXY,
                       0xbb : TYX, 0xaa : TAX, 0xa8 : TAY, 0x8a : TXA, 
-                      0x98 : TYA, 0x5b : TCD, 0x7b : TDC, 0x4c : JMP_absolute,
+                      0x98 : TYA, 0x5b : TCD, 0x7b : TDC, 0x1b : TCS,
+                      0x3b : TSC, 0x4c : JMP_absolute, 
                       0x6c : JMP_absolute_indirect, 0x80 : BRA, 0x82 : BRL,
                       0xf0 : BEQ, 0xd0 : BNE, 0x90 : BCC, 0xb0 : BCS,
                       0x50 : BVC, 0x70 : BVS, 0x10 : BPL, 0x30 : BMI,
@@ -2326,6 +2327,50 @@ var TDC = {
       cpu.p.z = 1;
     } else {
       cpu.p.z = 0;
+    }
+  }
+};
+
+var TCS = {
+  bytes_required:function() {
+    return 1;
+  },
+  execute:function(cpu) {
+    if(cpu.p.e|!cpu.p.m) {
+      cpu.r.s = cpu.r.a;
+    } else {
+      cpu.r.s = (cpu.r.b<<8)|cpu.r.a;
+    }
+  }
+};
+
+var TSC = {
+  bytes_required:function() {
+    return 1;
+  },
+  execute:function(cpu) {
+    if(cpu.p.e) {
+      cpu.r.b = 1;
+      cpu.r.a = cpu.r.s;
+      // TODO: Figure out if in emulation mode the z and n bits should always
+      // be set to zero here as a 1 is transferred to b.
+      cpu.p.n = 0;
+      cpu.p.z = 0;
+    } else {
+      if(cpu.p.m) {
+        cpu.r.a = cpu.r.s & 0xff;
+        cpu.r.b = cpu.r.s >> 8;
+        cpu.p.n = cpu.r.b >> 7;
+      } else {
+        cpu.r.a = cpu.r.s; 
+        cpu.p.n = cpu.r.a >> 15;
+      }
+
+      if(cpu.r.s===0) {
+        cpu.p.z = 1;
+      } else {
+        cpu.p.z = 0;
+      }
     }
   }
 };
