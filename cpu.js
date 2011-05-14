@@ -69,7 +69,7 @@ function CPU_65816() {
                       0x99 : STA_absolute_indexed_y,
                       0x95 : STA_direct_page_indexed_x, 
                       0x83 : STA_stack_relative,
-                      0x93 : STA_stack_relative_indexed_y,
+                      0x93 : STA_stack_relative_indirect_indexed_y,
                       0x8e : STX_absolute, 0x86 : STX_direct_page,
                       0x96 : STX_direct_page_indexed_y,
                       0x8c : STY_absolute, 0x84 : STY_direct_page,
