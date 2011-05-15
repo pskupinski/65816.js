@@ -40,7 +40,10 @@ function CPU_65816() {
     v:0, // Overflow                  (1 = overflow)
     n:0  // Negative                  (1 = negative)
   };
-  
+
+  this.interrupt = 0; // 0 = no interrupt. 1 = NMI. 2 = RESET. 3 = ABORT.
+                      // 4 = COP. 5 = IRQ. 6 = BRK.
+ 
   this.mmu = MMU;
   this.mmu.cpu = this; 
 
@@ -159,7 +162,7 @@ function CPU_65816() {
                       0xf4 : PEA, 0xd4 : PEI, 0x8b : PHB, 0xab : PLB,
                       0x4b : PHK, 0x0b : PHD, 0x2b : PLD, 0x62 : PER,
                       0x20 : JSR, 0x60 : RTS, 0x22 : JSL, 0x6b : RTL,
-                      0x54 : MVN, 0x44 : MVP };
+                      0x54 : MVN, 0x44 : MVP, 0x00 : BRK, 0x40 : RTI };
 
   /**
    * Take a raw hex string representing the program and execute it.
@@ -174,6 +177,81 @@ function CPU_65816() {
 
     var executing = true;
     while(executing) {
+      if(this.interrupt&&(!this.p.i|(this.interrupt===1))) {
+        // Load the related interrupt vector in page 0xff of bank zero.
+        if(!this.p.e) {
+          this.mmu.push_byte(this.r.k); 
+        }
+        this.mmu.push_byte(this.r.pc>>8);
+        this.mmu.push_byte(this.r.pc&0xff);
+        var p_byte = (cpu.p.n<<7)|(cpu.p.v<<6)|(cpu.p.m<<5)|(cpu.p.x<<4)|
+                    (cpu.p.d<<3)|(cpu.p.i<<2)|(cpu.p.z<<1)|cpu.p.c;
+        cpu.mmu.push_byte(p_byte);
+        if(!this.p.e) 
+          this.p.d = 0;
+        this.p.i = 1;
+        this.r.k = 0;
+       
+        // Look for where to jump to for the interrupt.  
+        if(this.p.e) {
+          // NMI
+          if(this.interrupt===1) {
+            var low_byte = this.mmu.read_byte_long(0xfffa, 0);
+            var high_byte = this.mmu.read_byte_long(0xfffb, 0);  
+            this.r.pc = (high_byte<<8)|low_byte;
+          // RESET
+          } else if(this.interrupt===2) {
+            var low_byte = this.mmu.read_byte_long(0xfffc, 0);
+            var high_byte = this.mmu.read_byte_long(0xfffd, 0);  
+            this.r.pc = (high_byte<<8)|low_byte;
+          // ABORT
+          } else if(this.interrupt===3) {
+            var low_byte = this.mmu.read_byte_long(0xfff8, 0);
+            var high_byte = this.mmu.read_byte_long(0xfff9, 0);  
+            this.r.pc = (high_byte<<8)|low_byte;
+          // COP
+          } else if(this.interrupt===4) {
+            var low_byte = this.mmu.read_byte_long(0xfff4, 0);
+            var high_byte = this.mmu.read_byte_long(0xfff5, 0);  
+            this.r.pc = (high_byte<<8)|low_byte;
+          // IRQ or BRK
+          } else if(this.interrupt===5|this.interrupt==6) {
+            var low_byte = this.mmu.read_byte_long(0xfffe, 0);
+            var high_byte = this.mmu.read_byte_long(0xffff, 0);  
+            this.r.pc = (high_byte<<8)|low_byte;
+          }
+        } else {
+          // NMI
+          if(this.interrupt===1) {
+            var low_byte = this.mmu.read_byte_long(0xffea, 0);
+            var high_byte = this.mmu.read_byte_long(0xffeb, 0);  
+            this.r.pc = (high_byte<<8)|low_byte;
+          // ABORT
+          } else if(this.interrupt===3) {
+            var low_byte = this.mmu.read_byte_long(0xffe8, 0);
+            var high_byte = this.mmu.read_byte_long(0xffe9, 0);  
+            this.r.pc = (high_byte<<8)|low_byte;
+          // COP
+          } else if(this.interrupt===4) {
+            var low_byte = this.mmu.read_byte_long(0xffe4, 0);
+            var high_byte = this.mmu.read_byte_long(0xffe5, 0);  
+            this.r.pc = (high_byte<<8)|low_byte;
+          // IRQ
+          } else if(this.interrupt===5) {
+            var low_byte = this.mmu.read_byte_long(0xffee, 0);
+            var high_byte = this.mmu.read_byte_long(0xffef, 0);  
+            this.r.pc = (high_byte<<8)|low_byte;
+          // BRK
+          } else if(this.interrupt===6) {
+            var low_byte = this.mmu.read_byte_long(0xffe6, 0);
+            var high_byte = this.mmu.read_byte_long(0xffe7, 0);  
+            this.r.pc = (high_byte<<8)|low_byte;
+          }
+        }
+
+        this.interrupt = 0;
+      }
+ 
       var b = this.mmu.read_byte_long(this.r.pc, this.r.k); 
       this.r.pc++;
 
@@ -261,6 +339,42 @@ var MMU = {
         byte_buffer = [];      
       } 
     }    
+  }
+};
+
+var BRK = {
+  bytes_required:function() {
+    return 2;
+  },
+  execute:function(cpu) {
+    cpu.interrupt = 6;
+    if(cpu.p.e) 
+      cpu.p.m = 1;
+  }
+};
+
+var RTI = {
+  bytes_required:function() {
+    return 1;
+  },
+  execute:function(cpu) {
+    var p_byte = cpu.mmu.pull_byte();
+    var pc_low = cpu.mmu.pull_byte();
+    var pc_high = cpu.mmu.pull_byte();
+    cpu.r.pc = (pc_high<<8)|pc_low;
+
+    cpu.p.c = p_byte & 0x01;
+    cpu.p.z = (p_byte & 0x02) >> 1;
+    cpu.p.i = (p_byte & 0x04) >> 2;
+    cpu.p.d = (p_byte & 0x08) >> 3;
+    cpu.p.x = (p_byte & 0x10) >> 4;
+    cpu.p.m = (p_byte & 0x20) >> 5;
+    cpu.p.v = (p_byte & 0x40) >> 6;
+    cpu.p.n = p_byte >> 7;
+
+    if(!cpu.p.e) {
+      cpu.r.k = cpu.mmu.pull_byte();
+    }
   }
 };
 
