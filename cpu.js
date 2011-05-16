@@ -162,7 +162,8 @@ function CPU_65816() {
                       0xf4 : PEA, 0xd4 : PEI, 0x8b : PHB, 0xab : PLB,
                       0x4b : PHK, 0x0b : PHD, 0x2b : PLD, 0x62 : PER,
                       0x20 : JSR, 0x60 : RTS, 0x22 : JSL, 0x6b : RTL,
-                      0x54 : MVN, 0x44 : MVP, 0x00 : BRK, 0x40 : RTI };
+                      0x54 : MVN, 0x44 : MVP, 0x00 : BRK, 0x40 : RTI,
+                      0x02 : COP };
 
   /**
    * Take a raw hex string representing the program and execute it.
@@ -339,6 +340,15 @@ var MMU = {
         byte_buffer = [];      
       } 
     }    
+  }
+};
+
+var COP = {
+  bytes_required:function() {
+    return 2;
+  },
+  execute:function(cpu) {
+    cpu.interrupt = 4;
   }
 };
 
