@@ -5,14 +5,16 @@ Testing:
 - Tests needed for LD* and ST* operations
 - Tests needed for IN* and DE* operations
 - Tests needed for T** transfer operations
+- Tests needed for interrupt support
 - Tests needed for the numerous other operations added
 CPU:
 - Implement complex addressing modes for many operations
-- Interrupts
+- More work on interrupts
 - Decimal mode support
 - Better emulation mode support
 - Have each operation return the number of cycles used by the execute function.
 - Implement the rest of the missing operations.
+- Optimization
 Memory:
 - Bank wrapping or not wrapping for certain addressing modes and with certain
   settings
@@ -23,3 +25,4 @@ Memory:
 Display:
 - Using the html page included provide a nice interface for using the cpu 
   emulator and provide many features helpful for debugging
+- Assembler and disassembler
