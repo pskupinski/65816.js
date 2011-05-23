@@ -7,13 +7,33 @@ Testing:
 - Tests needed for T** transfer operations
 - Tests needed for interrupt support
 - Tests needed for the numerous other operations added
+Operations Not Yet Implemented:
+- 0x04 : TSB direct page
+- 0x0c : TSB absolute
+- 0x14 : TRB direct page
+- 0x1c : TRB absolute
+- 0x24 : BIT direct page
+- 0x2c : BIT absolute
+- 0x34 : BIT direct page indexed x
+- 0x3c : BIT absolute indexed x
+- 0x42 : WDM
+- 0x5c : JMP absolute long
+- 0x7c : JMP absolute indexed x indirect
+- 0x89 : BIT immediate
+- 0x9a : TXS
+- 0xba : TSX
+- 0xcb : WAI
+- 0xd6 : DEC direct page indexed x
+- 0xdb : STP
+- 0xdc : JMP absolute indirect long
+- 0xde : DEC absolute indexed x
+- 0xf6 : INC direct page indexed x
+- 0xfc : JSR absolute indexed x indirect
+- 0xfe : INC absolute indexed x
 CPU:
-- Implement complex addressing modes for many operations
 - More work on interrupts
 - Decimal mode support
-- Better emulation mode support
 - Have each operation return the number of cycles used by the execute function.
-- Implement the rest of the missing operations.
 - Optimization
 Memory:
 - Bank wrapping or not wrapping for certain addressing modes and with certain
