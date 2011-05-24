@@ -23,13 +23,9 @@ Operations Not Yet Implemented:
 - 0x9a : TXS
 - 0xba : TSX
 - 0xcb : WAI
-- 0xd6 : DEC direct page indexed x
 - 0xdb : STP
 - 0xdc : JMP absolute indirect long
-- 0xde : DEC absolute indexed x
-- 0xf6 : INC direct page indexed x
 - 0xfc : JSR absolute indexed x indirect
-- 0xfe : INC absolute indexed x
 CPU:
 - More work on interrupts
 - Decimal mode support

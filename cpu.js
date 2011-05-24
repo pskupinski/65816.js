@@ -87,9 +87,13 @@ function CPU_65816() {
                       0x8c : STY_absolute, 0x84 : STY_direct_page,
                       0x94 : STY_direct_page_indexed_x,
                       0x1a : INC_accumulator, 0xe6 : INC_direct_page,
-                      0xee : INC_absolute, 0xe8 : INX, 0xc8 : INY,
+                      0xee : INC_absolute, 0xf6 : INC_direct_page_indexed_x,
+                      0xfe : INC_absolute_indexed_x,
+                      0xe8 : INX, 0xc8 : INY,
                       0x3a : DEC_accumulator, 0xce : DEC_absolute, 
+                      0xde : DEC_absolute_indexed_x,
                       0xc6 : DEC_direct_page, 0xca : DEX, 0x88 : DEY,
+                      0xd6 : DEC_direct_page_indexed_x,
                       0x9c : STZ_absolute, 0x64 : STZ_direct_page,
                       0x9e : STZ_absolute_indexed_x,
                       0x74 : STZ_direct_page_indexed_x, 0x9b : TXY,
@@ -4748,7 +4752,7 @@ var DEC_absolute = {
     return 3;
   },
   execute: function(cpu, bytes) {
-    var location = (bytes[1]<<8)|bytes[0]
+    var location = (bytes[1]<<8)|bytes[0];
     var temp;
     if(cpu.p.e|cpu.p.m) {
       temp = cpu.mmu.read_byte(location);
@@ -4787,6 +4791,54 @@ var DEC_absolute = {
       low_byte = temp & 0x00ff;
       cpu.mmu.store_byte(location, low_byte);
       cpu.mmu.store_byte(location+1, high_byte);
+    }
+  }
+};
+
+var DEC_absolute_indexed_x = {
+  bytes_required: function() {
+    return 3;
+  },
+  execute: function(cpu, bytes) {
+    var location = ((bytes[1]<<8)|bytes[0]) + cpu.r.x;
+    var temp;
+    if(cpu.p.e|cpu.p.m) {
+      temp = cpu.mmu.read_byte(location&0xffff);
+      if(temp===0) {
+        cpu.mmu.store_byte(location&0xffff, 0xff);
+        cpu.p.n = 1; 
+        cpu.p.z = 0;
+      } else {
+        temp--;
+        cpu.mmu.store_byte(location&0xffff, temp);
+        cpu.p.n = temp >> 7;
+        if(temp===0) {
+          cpu.p.z = 1; 
+        } else {
+          cpu.p.z = 0;
+        }
+      }
+    } else {
+      var low_byte = cpu.mmu.read_byte(location&0xffff); 
+      var high_byte = cpu.mmu.read_byte((location+1)&0xffff);
+      temp = (high_byte<<8) | low_byte;
+      if(temp===0) {
+        temp = 0xffff;
+        cpu.p.n = 1;
+        cpu.p.z = 0;
+      } else {
+        temp--;
+        cpu.p.n = temp >> 15;
+        if(temp===0) { 
+          cpu.p.z = 1;
+        } else {
+          cpu.p.z = 0; 
+        }
+      }
+      high_byte = temp >> 8;
+      low_byte = temp & 0x00ff;
+      cpu.mmu.store_byte(location&0xffff, low_byte);
+      cpu.mmu.store_byte((location+1)&0xffff, high_byte);
     }
   }
 };
@@ -4835,6 +4887,54 @@ var DEC_direct_page = {
       low_byte = temp & 0x00ff;
       cpu.mmu.store_byte(location, low_byte);
       cpu.mmu.store_byte(location+1, high_byte);
+    }
+  }
+};
+
+var DEC_direct_page_indexed_x = {
+  bytes_required: function() {
+    return 2;
+  },
+  execute: function(cpu, bytes) {
+    var location = bytes[0] + cpu.r.d + cpu.r.x;
+    var temp;
+    if(cpu.p.e|cpu.p.m) {
+      temp = cpu.mmu.read_byte(location&0xffff);
+      if(temp===0) {
+        cpu.mmu.store_byte(location&0xffff, 0xff);
+        cpu.p.n = 1;
+        cpu.p.z = 0;
+      } else {
+        temp--;
+        cpu.mmu.store_byte(location&0xffff, temp);
+        cpu.p.n = temp >> 7;
+        if(temp===0) {
+          cpu.p.z = 1;
+        } else { 
+          cpu.p.z = 0; 
+        }
+      }
+    } else {
+      var low_byte = cpu.mmu.read_byte(location&0xffff); 
+      var high_byte = cpu.mmu.read_byte((location+1)&0xffff);
+      temp = (high_byte<<8) | low_byte;
+      if(temp===0) {
+        temp = 0xffff;
+        cpu.p.n = 1;
+        cpu.p.z = 0;
+      } else {
+        temp--;
+        cpu.p.n = temp >> 15;
+        if(temp===0) { 
+          cpu.p.z = 1;
+        } else {
+          cpu.p.z = 0;
+        }
+      }
+      high_byte = temp >> 8;
+      low_byte = temp & 0x00ff;
+      cpu.mmu.store_byte(location&0xffff, low_byte);
+      cpu.mmu.store_byte((location+1)&0xffff, high_byte);
     }
   }
 };
@@ -4942,6 +5042,42 @@ var INC_absolute = {
   }
 };
 
+var INC_absolute_indexed_x = {
+  bytes_required: function() {
+    return 3;
+  },
+  execute: function(cpu, bytes) {
+    var location = ((bytes[1]<<8)|bytes[0]) + cpu.r.x;
+    var temp;
+    if(cpu.p.e|cpu.p.m) {
+      temp = cpu.mmu.read_byte(location&0xffff) + 1; 
+      temp &= 0xff;
+      cpu.p.n = temp >> 7;
+      cpu.mmu.store_byte(location&0xffff, temp);
+      if(temp===0) {
+        cpu.p.z = 1;
+      } else {
+        cpu.p.z = 0;
+      }
+    } else {
+      var low_byte = cpu.mmu.read_byte(location&0xffff); 
+      var high_byte = cpu.mmu.read_byte((location+1)&0xffff);
+      temp = (high_byte<<8) | low_byte;
+      temp++;
+      cpu.p.n = temp >> 15;
+      high_byte = temp >> 8;
+      low_byte = temp & 0x00ff;
+      cpu.mmu.store_byte(location&0xffff, low_byte);
+      cpu.mmu.store_byte((location+1)&0xffff, high_byte);
+      if(((high_byte<<8)|low_byte)===0) { 
+        cpu.p.z = 1;
+      } else {
+        cpu.p.z = 0; 
+      }
+    }
+  }
+};
+
 var INC_direct_page = {
   bytes_required: function() {
     return 2;
@@ -4969,6 +5105,42 @@ var INC_direct_page = {
       low_byte = temp & 0x00ff;
       cpu.mmu.store_byte(location, low_byte);
       cpu.mmu.store_byte(location+1, high_byte);
+      if(((high_byte<<8)|low_byte)===0) { 
+        cpu.p.z = 1;
+      } else {
+        cpu.p.z = 0;
+      }
+    }
+  }
+};
+
+var INC_direct_page_indexed_x = {
+  bytes_required: function() {
+    return 2;
+  },
+  execute: function(cpu, bytes) {
+    var location = bytes[0] + cpu.r.d + cpu.r.x;
+    var temp;
+    if(cpu.p.e|cpu.p.m) {
+      temp = cpu.mmu.read_byte(location&0xffff) + 1; 
+      temp &= 0xff;
+      cpu.mmu.store_byte(location&0xffff, temp);
+      cpu.p.n = temp >> 7;
+      if(temp===0) {
+        cpu.p.z = 1;
+      } else {
+        cpu.p.z = 0;
+     }
+    } else {
+      var low_byte = cpu.mmu.read_byte(location&0xffff); 
+      var high_byte = cpu.mmu.read_byte((location+1)&0xffff);
+      temp = (high_byte<<8) | low_byte;
+      temp++;
+      cpu.p.n = temp >> 15;
+      high_byte = temp >> 8;
+      low_byte = temp & 0x00ff;
+      cpu.mmu.store_byte(location&0xffff, low_byte);
+      cpu.mmu.store_byte((location+1)&0xffff, high_byte);
       if(((high_byte<<8)|low_byte)===0) { 
         cpu.p.z = 1;
       } else {
