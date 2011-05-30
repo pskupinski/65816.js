@@ -205,7 +205,7 @@ function CPU_65816() {
                       0x4b : PHK, 0x0b : PHD, 0x2b : PLD, 0x62 : PER,
                       0x20 : JSR, 0x60 : RTS, 0x22 : JSL, 0x6b : RTL,
                       0x54 : MVN, 0x44 : MVP, 0x00 : BRK, 0x40 : RTI,
-                      0x02 : COP };
+                      0x02 : COP, 0x89 : BIT_const };
 
   /**
    * Take a raw hex string representing the program and execute it.
@@ -418,6 +418,34 @@ var MMU = {
         byte_buffer = [];      
       } 
     }    
+  }
+};
+
+var BIT_const = {
+  bytes_required:function(cpu) {
+    if(cpu.p.m)
+      return 2;
+    else 
+      return 3;
+  },
+  execute:function(cpu, bytes) {
+    var and_result;
+    if(cpu.p.e|cpu.p.m) {
+      cpu.p.n = bytes[0] >> 7;
+      cpu.p.v = (bytes[0] >> 6) & 0x1;
+      and_result = cpu.r.a & bytes[0];
+    } else {
+      var argument = (bytes[1]<<8)|bytes[0];
+      cpu.p.n = bytes[1] >> 7;
+      cpu.p.v = (bytes[1] >> 6) & 0x1;
+      and_result = cpu.r.a & argument;
+    }
+
+    if(and_result===0) {
+      cpu.p.z = 1;
+    } else {
+      cpu.p.z = 0;
+    }
   }
 };
 
