@@ -37,7 +37,7 @@ Memory:
 - Page wrapping or not wrapping for certain addressing modes and with certain
   settings
 - ROM protection
-- Memory mapped I/O
+- Improve the memory mapped I/O interface and handling
 Display:
 - Using the html page included provide a nice interface for using the cpu 
   emulator and provide many features helpful for debugging

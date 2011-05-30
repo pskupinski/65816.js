@@ -227,9 +227,9 @@ function CPU_65816() {
         }
         this.mmu.push_byte(this.r.pc>>8);
         this.mmu.push_byte(this.r.pc&0xff);
-        var p_byte = (cpu.p.n<<7)|(cpu.p.v<<6)|(cpu.p.m<<5)|(cpu.p.x<<4)|
-                    (cpu.p.d<<3)|(cpu.p.i<<2)|(cpu.p.z<<1)|cpu.p.c;
-        cpu.mmu.push_byte(p_byte);
+        var p_byte = (this.p.n<<7)|(this.p.v<<6)|(this.p.m<<5)|(this.p.x<<4)|
+                    (this.p.d<<3)|(this.p.i<<2)|(this.p.z<<1)|this.p.c;
+        this.mmu.push_byte(p_byte);
         if(!this.p.e) 
           this.p.d = 0;
         this.p.i = 1;
@@ -325,49 +325,85 @@ function CPU_65816() {
 var MMU = {
   cpu: {},
   memory: { 0: {} },
+  memory_mapped_io_devices: {},
+
+  add_memory_mapped_io_device: function(write_callback, read_callback, bank, 
+                                        location) {
+    if(typeof this.memory_mapped_io_devices[bank] === 'undefined') {
+      this.memory_mapped_io_devices[bank] = {};
+    }
+    this.memory_mapped_io_devices[bank][location] = { write: write_callback, read: read_callback }; 
+  },
 
   pull_byte: function() {
     if(this.cpu.p.e) {
       if(this.cpu.r.s===0xff) {
         this.cpu.r.s = 0;
-        return this.memory[this.cpu.r.dbr][0x100|this.cpu.r.s]; 
+        return this.read_byte(0x100);
       } else {
-        return this.memory[this.cpu.r.dbr][0x100|(++this.cpu.r.s)];
+        return this.read_byte(0x100|(++this.cpu.r.s));
       }
     } else {
-      return this.memory[this.cpu.r.dbr][++this.cpu.r.s];
+      return this.read_byte(++this.cpu.r.s);
     }
   },
 
   push_byte: function(b) {
     if(this.cpu.p.e) {
       if(this.cpu.r.s===0) {
-        this.memory[this.cpu.r.dbr][0x100|this.cpu.r.s] = b;
+	this.store_byte(0x100, b);
         this.cpu.r.s = 0xff;
       } else {
-        this.memory[this.cpu.r.dbr][0x100|(this.cpu.r.s--)] = b;
+        this.store_byte((0x100|(this.cpu.r.s--)), b);
       }
     } else {
-      this.memory[this.cpu.r.dbr][this.cpu.r.s--] = b;
+      this.store_byte(this.cpu.r.s--, b);
     }
   },
 
   read_byte: function(location) {
-    return this.memory[this.cpu.r.dbr][location];
+    var device_map_at_bank = this.memory_mapped_io_devices[this.cpu.r.dbr];
+    if(device_map_at_bank!=null) {
+      var device = device_map_at_bank[location];
+      if(device!=null)
+        return device.read();   
+    } 
+      return this.memory[this.cpu.r.dbr][location];
   },
  
   read_byte_long: function(location, bank) {
+    if(typeof this.memory[bank] === 'undefined') {
+      this.memory[bank] = {};
+    }
+    var device_map_at_bank = this.memory_mapped_io_devices[bank];
+    if(device_map_at_bank!=null) {
+      var device = device_map_at_bank[location];
+      if(device!=null)
+        return device.read();   
+    }
     return this.memory[bank][location];
   },
 
   store_byte: function(location, b) {
-    this.memory[this.cpu.r.dbr][location] = b;       
+    var device_map_at_bank = this.memory_mapped_io_devices[this.cpu.r.dbr];
+    if(device_map_at_bank!=null) {
+      var device = device_map_at_bank[location];
+      if(device!=null) 
+        device.write(b);
+    } 
+    this.memory[this.cpu.r.dbr][location] = b;
   },
 
   store_byte_long: function(location, bank, b) {
     if(typeof this.memory[bank] === 'undefined') {
       this.memory[bank] = {};
     }
+    var device_map_at_bank = this.memory_mapped_io_devices[bank];
+    if(device_map_at_bank!=null) {
+      var device = device_map_at_bank[location];
+      if(device!=null)
+        device.write(b);
+    } 
     this.memory[bank][location] = b;
   },
 
