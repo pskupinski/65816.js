@@ -208,7 +208,8 @@ function CPU_65816() {
                       0x02 : COP, 0x89 : BIT_const, 0x2c : BIT_absolute,
                       0x24 : BIT_direct_page,
                       0x3c : BIT_absolute_indexed_x,
-                      0x34 : BIT_direct_page_indexed_x };
+                      0x34 : BIT_direct_page_indexed_x, 
+                      0x0c : TSB_absolute, 0x04 : TSB_direct_page };
 
   /**
    * Take a raw hex string representing the program and execute it.
@@ -421,6 +422,70 @@ var MMU = {
         byte_buffer = [];      
       } 
     }    
+  }
+};
+
+var TSB_absolute = {
+  bytes_required:function() {
+    return 3;
+  },
+  execute:function(cpu, bytes) {
+    var location = (bytes[1]<<8)|bytes[0];
+    if(cpu.p.e|cpu.p.m) {
+      var data = cpu.mmu.read_byte(location);
+      if((data & cpu.r.a) === 0) {
+        cpu.p.z = 1;
+      } else {
+        cpu.p.z = 0;
+      }
+      cpu.mmu.store_byte(location, (cpu.r.a | data));
+    } else {
+      var low_byte = cpu.mmu.read_byte(location);
+      var high_byte = cpu.mmu.read_byte((location+1)&0xffff);
+      var data = (high_byte<<8) | low_byte;
+      if((data & cpu.r.a) === 0) {
+        cpu.p.z = 1;
+      } else {
+        cpu.p.z = 0;
+      }
+      data |= cpu.r.a;
+      high_byte = data >> 8;
+      low_byte = data & 0xff;
+      cpu.mmu.store_byte(location, low_byte);
+      cpu.mmu.store_byte((location+1)&0xffff, high_byte); 
+    }
+  }
+};
+
+var TSB_direct_page = {
+  bytes_required:function() {
+    return 2;
+  },
+  execute:function(cpu, bytes) {
+    var location = bytes[0] + cpu.r.d;
+    if(cpu.p.e|cpu.p.m) {
+      var data = cpu.mmu.read_byte(location&0xffff);
+      if((data & cpu.r.a) === 0) {
+        cpu.p.z = 1;
+      } else {
+        cpu.p.z = 0;
+      }
+      cpu.mmu.store_byte(location&0xffff, (cpu.r.a | data));
+    } else {
+      var low_byte = cpu.mmu.read_byte(location&0xffff);
+      var high_byte = cpu.mmu.read_byte((location+1)&0xffff);
+      var data = (high_byte<<8) | low_byte;
+      if((data & cpu.r.a) === 0) {
+        cpu.p.z = 1;
+      } else {
+        cpu.p.z = 0;
+      }
+      data |= cpu.r.a;
+      high_byte = data >> 8;
+      low_byte = data & 0xff;
+      cpu.mmu.store_byte(location&0xffff, low_byte);
+      cpu.mmu.store_byte((location+1)&0xffff, high_byte); 
+    }
   }
 };
 
