@@ -210,7 +210,8 @@ function CPU_65816() {
                       0x3c : BIT_absolute_indexed_x,
                       0x34 : BIT_direct_page_indexed_x, 
                       0x0c : TSB_absolute, 0x04 : TSB_direct_page,
-                      0x1c : TRB_absolute, 0x14 : TRB_direct_page };
+                      0x1c : TRB_absolute, 0x14 : TRB_direct_page,
+                      0x9a : TXS, 0xba : TSX };
 
   /**
    * Take a raw hex string representing the program and execute it.
@@ -423,6 +424,45 @@ var MMU = {
         byte_buffer = [];      
       } 
     }    
+  }
+};
+
+var TXS = {
+  bytes_required:function() {
+    return 1;
+  },
+  execute:function(cpu) {
+    cpu.r.s = cpu.r.x; 
+    if(cpu.p.e|cpu.p.x) {
+      cpu.p.n = cpu.r.s >> 7;
+    } else {
+      cpu.p.n = cpu.r.s >> 15;
+    } 
+    if(cpu.r.s===0) {
+      cpu.p.z = 1;
+    } else {
+      cpu.p.z = 0;
+    }
+  }
+};
+
+var TSX = {
+  bytes_required:function() {
+    return 1;
+  },
+  execute:function(cpu) {
+    if(cpu.p.e|cpu.p.x) {
+      cpu.r.x = cpu.r.s & 0xff;
+      cpu.p.n = cpu.r.x >> 7;
+    } else {
+      cpu.r.x = cpu.r.s;
+      cpu.p.n = cpu.r.x >> 15; 
+    }   
+    if(cpu.r.x===0) {
+      cpu.p.z = 1;
+    } else {
+      cpu.p.z = 0;
+    }
   }
 };
 

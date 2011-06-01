@@ -11,8 +11,6 @@ Operations Not Yet Implemented:
 - 0x42 : WDM
 - 0x5c : JMP absolute long
 - 0x7c : JMP absolute indexed x indirect
-- 0x9a : TXS
-- 0xba : TSX
 - 0xcb : WAI
 - 0xdb : STP
 - 0xdc : JMP absolute indirect long
