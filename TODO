@@ -8,8 +8,6 @@ Testing:
 - Tests needed for interrupt support
 - Tests needed for the numerous other operations added
 Operations Not Yet Implemented:
-- 0x14 : TRB direct page
-- 0x1c : TRB absolute
 - 0x42 : WDM
 - 0x5c : JMP absolute long
 - 0x7c : JMP absolute indexed x indirect
