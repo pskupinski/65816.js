@@ -372,7 +372,7 @@ var MMU = {
     if(device_map_at_bank!=null) {
       var device = device_map_at_bank[location];
       if(device!=null)
-        return device.read();   
+        return device.read(this.cpu);   
     } 
       return this.memory[this.cpu.r.dbr][location];
   },
@@ -385,7 +385,7 @@ var MMU = {
     if(device_map_at_bank!=null) {
       var device = device_map_at_bank[location];
       if(device!=null)
-        return device.read();   
+        return device.read(this.cpu);   
     }
     return this.memory[bank][location];
   },
@@ -395,7 +395,7 @@ var MMU = {
     if(device_map_at_bank!=null) {
       var device = device_map_at_bank[location];
       if(device!=null) 
-        device.write(b);
+        device.write(this.cpu, b);
     } 
     this.memory[this.cpu.r.dbr][location] = b;
   },
@@ -408,7 +408,7 @@ var MMU = {
     if(device_map_at_bank!=null) {
       var device = device_map_at_bank[location];
       if(device!=null)
-        device.write(b);
+        device.write(this.cpu, b);
     } 
     this.memory[bank][location] = b;
   },
