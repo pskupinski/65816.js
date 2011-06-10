@@ -100,6 +100,8 @@ function CPU_65816() {
                       0xbb : TYX, 0xaa : TAX, 0xa8 : TAY, 0x8a : TXA, 
                       0x98 : TYA, 0x5b : TCD, 0x7b : TDC, 0x1b : TCS,
                       0x3b : TSC, 0x4c : JMP_absolute, 
+                      0x5c : JMP_absolute_long, 
+                      0xdc : JMP_absolute_indirect_long,
                       0x6c : JMP_absolute_indirect, 0x80 : BRA, 0x82 : BRL,
                       0xf0 : BEQ, 0xd0 : BNE, 0x90 : BCC, 0xb0 : BCS,
                       0x50 : BVC, 0x70 : BVS, 0x10 : BPL, 0x30 : BMI,
@@ -4001,6 +4003,29 @@ var JMP_absolute_indirect = {
     var low_byte = cpu.mmu.read_byte(location);
     var high_byte = cpu.mmu.read_byte(location+1);
     cpu.r.pc = (high_byte<<8) | low_byte;
+  }
+};
+
+var JMP_absolute_long = {
+  bytes_required:function() {
+    return 4;
+  },
+  execute:function(cpu, bytes) {
+    cpu.r.k = bytes[2];
+    cpu.r.pc = (bytes[1]<<8)|bytes[0];
+  }
+};
+
+var JMP_absolute_indirect_long = {
+  bytes_required:function() {
+    return 3;
+  },
+  execute:function(cpu, bytes) {
+    var location = (bytes[1]<<8)|bytes[0];
+    var low_byte = cpu.mmu.read_byte(location);
+    var high_byte = cpu.mmu.read_byte(location+1);
+    cpu.r.pc = (high_byte<<8) | low_byte;
+    cpu.r.k = cpu.mmu.read_byte(location+2);
   }
 };
 

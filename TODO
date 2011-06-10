@@ -9,11 +9,9 @@ Testing:
 - Tests needed for the numerous other operations added
 Operations Not Yet Implemented:
 - 0x42 : WDM
-- 0x5c : JMP absolute long
 - 0x7c : JMP absolute indexed x indirect
 - 0xcb : WAI
 - 0xdb : STP
-- 0xdc : JMP absolute indirect long
 - 0xfc : JSR absolute indexed x indirect
 CPU:
 - More work on interrupts
