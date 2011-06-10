@@ -213,7 +213,7 @@ function CPU_65816() {
                       0x34 : BIT_direct_page_indexed_x, 
                       0x0c : TSB_absolute, 0x04 : TSB_direct_page,
                       0x1c : TRB_absolute, 0x14 : TRB_direct_page,
-                      0x9a : TXS, 0xba : TSX };
+                      0x9a : TXS, 0xba : TSX, 0x42: WDM };
 
   /**
    * Take a raw hex string representing the program and execute it.
@@ -427,6 +427,13 @@ var MMU = {
       } 
     }    
   }
+};
+
+var WDM = {
+  bytes_required:function() {
+    return 2;
+  },
+  execute:function() {}
 };
 
 var TXS = {
