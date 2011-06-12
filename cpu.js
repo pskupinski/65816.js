@@ -102,6 +102,7 @@ function CPU_65816() {
                       0x3b : TSC, 0x4c : JMP_absolute, 
                       0x5c : JMP_absolute_long, 
                       0xdc : JMP_absolute_indirect_long,
+                      0x7c : JMP_absolute_indexed_x_indirect,
                       0x6c : JMP_absolute_indirect, 0x80 : BRA, 0x82 : BRL,
                       0xf0 : BEQ, 0xd0 : BNE, 0x90 : BCC, 0xb0 : BCS,
                       0x50 : BVC, 0x70 : BVS, 0x10 : BPL, 0x30 : BMI,
@@ -4033,6 +4034,34 @@ var JMP_absolute_indirect_long = {
     var high_byte = cpu.mmu.read_byte(location+1);
     cpu.r.pc = (high_byte<<8) | low_byte;
     cpu.r.k = cpu.mmu.read_byte(location+2);
+  }
+};
+
+var JMP_absolute_indexed_x_indirect = {
+  bytes_required:function() {
+    return 3;
+  },
+  execute:function(cpu, bytes) {
+    var location = ((bytes[1]<<8)|bytes[0])+cpu.r.x;
+    var bank = cpu.r.k;
+    if(location&0x10000) {
+       bank++; 
+    }
+    location &= 0xffff;
+    var indirect_location_low_byte = cpu.mmu.read_byte_long(location, bank);
+    var indirect_location_high_byte = cpu.mmu.read_byte_long(location+1, bank);
+    var indirect_location = (indirect_location_high_byte<<8) | 
+                            indirect_location_low_byte;  
+    var low_byte = cpu.mmu.read_byte(indirect_location);
+    bank = cpu.r.k;
+    if(indirect_location===0xffff) {
+      indirect_location = 0; 
+      bank++;
+    } else {
+      indirect_location++;
+    }
+    var high_byte = cpu.mmu.read_byte_long(indirect_location, bank);
+    cpu.r.pc =  (high_byte<<8)|low_byte;
   }
 };
 
