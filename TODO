@@ -10,7 +10,6 @@ Testing:
 Operations Not Yet Implemented:
 - 0xcb : WAI
 - 0xdb : STP
-- 0xfc : JSR absolute indexed x indirect
 CPU:
 - More work on interrupts
 - Decimal mode support

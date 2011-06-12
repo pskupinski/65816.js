@@ -206,7 +206,8 @@ function CPU_65816() {
                       0xda : PHX, 0xfa : PLX, 0x08 : PHP, 0x28 : PLP, 
                       0xf4 : PEA, 0xd4 : PEI, 0x8b : PHB, 0xab : PLB,
                       0x4b : PHK, 0x0b : PHD, 0x2b : PLD, 0x62 : PER,
-                      0x20 : JSR, 0x60 : RTS, 0x22 : JSL, 0x6b : RTL,
+                      0x20 : JSR, 0xfc : JSR_absolute_indexed_x_indirect,
+                      0x60 : RTS, 0x22 : JSL, 0x6b : RTL,
                       0x54 : MVN, 0x44 : MVP, 0x00 : BRK, 0x40 : RTI,
                       0x02 : COP, 0x89 : BIT_const, 0x2c : BIT_absolute,
                       0x24 : BIT_direct_page,
@@ -879,6 +880,34 @@ var JSR = {
     cpu.mmu.push_byte(high_byte);
     cpu.mmu.push_byte(low_byte);
     cpu.r.pc = (bytes[1]<<8)|bytes[0];    
+  }
+};
+
+var JSR_absolute_indexed_x_indirect = {
+  bytes_required:function() {
+    return 3;
+  },
+  execute:function(cpu, bytes) {
+    var location = ((bytes[1]<<8)|bytes[0])+cpu.r.x;
+    var bank = cpu.r.k;
+    if(location&0x10000) {
+       bank++; 
+    }
+    location &= 0xffff;
+    var indirect_location_low_byte = cpu.mmu.read_byte_long(location, bank);
+    var indirect_location_high_byte = cpu.mmu.read_byte_long(location+1, bank);
+    var indirect_location = (indirect_location_high_byte<<8) | 
+                            indirect_location_low_byte;  
+    var low_byte = cpu.mmu.read_byte(indirect_location);
+    bank = cpu.r.k;
+    if(indirect_location===0xffff) {
+      indirect_location = 0; 
+      bank++;
+    } else {
+      indirect_location++;
+    }
+    var high_byte = cpu.mmu.read_byte_long(indirect_location, bank);
+    JSR.execute(cpu, [low_byte, high_byte]);
   }
 };
 
