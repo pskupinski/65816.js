@@ -8,7 +8,6 @@ Testing:
 - Tests needed for interrupt support
 - Tests needed for the numerous other operations added
 Operations Not Yet Implemented:
-- 0xcb : WAI
 - 0xdb : STP
 CPU:
 - More work on interrupts

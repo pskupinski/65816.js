@@ -41,8 +41,23 @@ function CPU_65816() {
     n:0  // Negative                  (1 = negative)
   };
 
-  this.interrupt = 0; // 0 = no interrupt. 1 = NMI. 2 = RESET. 3 = ABORT.
-                      // 4 = COP. 5 = IRQ. 6 = BRK.
+  this.INTERRUPT = { NO_INTERRUPT: 0, NMI: 1, RESET: 2, ABORT: 3, COP: 4, IRQ: 5, BRK: 6 };
+
+  this.interrupt = this.INTERRUPT.NO_INTERRUPT;
+
+  // This is set by the WAI operation to stop execution until an interrupt
+  // is received.
+  this.waiting = false;
+
+  this.raise_interrupt = function(i) {
+    if(this.waiting) {
+      this.interrupt = i;
+      this.waiting = false;
+      this.start(); 
+    } else {
+      this.interrupt = i;
+    }
+  };
  
   this.mmu = MMU;
   this.mmu.cpu = this; 
@@ -215,7 +230,7 @@ function CPU_65816() {
                       0x34 : BIT_direct_page_indexed_x, 
                       0x0c : TSB_absolute, 0x04 : TSB_direct_page,
                       0x1c : TRB_absolute, 0x14 : TRB_direct_page,
-                      0x9a : TXS, 0xba : TSX, 0x42: WDM };
+                      0x9a : TXS, 0xba : TSX, 0x42: WDM, 0xcb : WAI };
 
   /**
    * Take a raw hex string representing the program and execute it.
@@ -228,9 +243,13 @@ function CPU_65816() {
       this.r.pc += 4096;
     }
 
+    this.start(); 
+  };
+
+  this.start = function() {
     var executing = true;
     while(executing) {
-      if(this.interrupt&&(!this.p.i|(this.interrupt===1))) {
+      if(this.interrupt&&(!this.p.i|(this.interrupt===this.INTERRUPT.NMI))) {
         // Load the related interrupt vector in page 0xff of bank zero.
         if(!this.p.e) {
           this.mmu.push_byte(this.r.k); 
@@ -248,61 +267,62 @@ function CPU_65816() {
         // Look for where to jump to for the interrupt.  
         if(this.p.e) {
           // NMI
-          if(this.interrupt===1) {
+          if(this.interrupt===this.INTERRUPT.NMI) {
             var low_byte = this.mmu.read_byte_long(0xfffa, 0);
             var high_byte = this.mmu.read_byte_long(0xfffb, 0);  
             this.r.pc = (high_byte<<8)|low_byte;
           // RESET
-          } else if(this.interrupt===2) {
+          } else if(this.interrupt===this.INTERRUPT.RESET) {
             var low_byte = this.mmu.read_byte_long(0xfffc, 0);
             var high_byte = this.mmu.read_byte_long(0xfffd, 0);  
             this.r.pc = (high_byte<<8)|low_byte;
           // ABORT
-          } else if(this.interrupt===3) {
+          } else if(this.interrupt===this.INTERRUPT.ABORT) {
             var low_byte = this.mmu.read_byte_long(0xfff8, 0);
             var high_byte = this.mmu.read_byte_long(0xfff9, 0);  
             this.r.pc = (high_byte<<8)|low_byte;
           // COP
-          } else if(this.interrupt===4) {
+          } else if(this.interrupt===this.INTERRUPT.COP) {
             var low_byte = this.mmu.read_byte_long(0xfff4, 0);
             var high_byte = this.mmu.read_byte_long(0xfff5, 0);  
             this.r.pc = (high_byte<<8)|low_byte;
           // IRQ or BRK
-          } else if(this.interrupt===5|this.interrupt==6) {
+          } else if(this.interrupt===this.INTERRUPT.IRQ |
+                    this.interrupt==this.INTERRUPT.BRK) {
             var low_byte = this.mmu.read_byte_long(0xfffe, 0);
             var high_byte = this.mmu.read_byte_long(0xffff, 0);  
             this.r.pc = (high_byte<<8)|low_byte;
           }
         } else {
           // NMI
-          if(this.interrupt===1) {
+          if(this.interrupt===this.INTERRUPT.NMI) {
             var low_byte = this.mmu.read_byte_long(0xffea, 0);
             var high_byte = this.mmu.read_byte_long(0xffeb, 0);  
             this.r.pc = (high_byte<<8)|low_byte;
           // ABORT
-          } else if(this.interrupt===3) {
+          } else if(this.interrupt===this.INTERRUPT.ABORT) {
             var low_byte = this.mmu.read_byte_long(0xffe8, 0);
             var high_byte = this.mmu.read_byte_long(0xffe9, 0);  
             this.r.pc = (high_byte<<8)|low_byte;
           // COP
-          } else if(this.interrupt===4) {
+          } else if(this.interrupt===this.INTERRUPT_COP) {
             var low_byte = this.mmu.read_byte_long(0xffe4, 0);
             var high_byte = this.mmu.read_byte_long(0xffe5, 0);  
             this.r.pc = (high_byte<<8)|low_byte;
           // IRQ
-          } else if(this.interrupt===5) {
+          } else if(this.interrupt===this.INTERRUPT.IRQ) {
             var low_byte = this.mmu.read_byte_long(0xffee, 0);
             var high_byte = this.mmu.read_byte_long(0xffef, 0);  
             this.r.pc = (high_byte<<8)|low_byte;
           // BRK
-          } else if(this.interrupt===6) {
+          } else if(this.interrupt===this.INTERRUPT.BRK) {
             var low_byte = this.mmu.read_byte_long(0xffe6, 0);
             var high_byte = this.mmu.read_byte_long(0xffe7, 0);  
             this.r.pc = (high_byte<<8)|low_byte;
           }
         }
 
-        this.interrupt = 0;
+        this.interrupt = this.INTERRUPT.NO_INTERRUPT;
       }
  
       var b = this.mmu.read_byte_long(this.r.pc, this.r.k); 
@@ -328,8 +348,11 @@ function CPU_65816() {
         }
         operation.execute(this,bytes);
       }
-    } 
-  } 
+
+      if(this.waiting) 
+        executing = false;
+    }
+  }; 
 }
 
 var MMU = {
@@ -428,6 +451,15 @@ var MMU = {
         byte_buffer = [];      
       } 
     }    
+  }
+};
+
+var WAI = {
+  bytes_required:function() {
+    return 1; 
+  },
+  execute:function(cpu) {
+    cpu.waiting = true;
   }
 };
 
@@ -717,7 +749,7 @@ var COP = {
     return 2;
   },
   execute:function(cpu) {
-    cpu.interrupt = 4;
+    cpu.interrupt = cpu.INTERRUPT.COP;
   }
 };
 
@@ -726,7 +758,7 @@ var BRK = {
     return 2;
   },
   execute:function(cpu) {
-    cpu.interrupt = 6;
+    cpu.interrupt = cpu.INTERRUPT.BRK;
     if(cpu.p.e) 
       cpu.p.m = 1;
   }
