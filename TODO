@@ -7,8 +7,6 @@ Testing:
 - Tests needed for T** transfer operations
 - Tests needed for interrupt support
 - Tests needed for the numerous other operations added
-Operations Not Yet Implemented:
-- 0xdb : STP
 CPU:
 - More work on interrupts
 - Decimal mode support

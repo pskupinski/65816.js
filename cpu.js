@@ -49,11 +49,23 @@ function CPU_65816() {
   // is received.
   this.waiting = false;
 
+  // This is set by the STP operation to stop execution until a RESET
+  // interrupt is received.
+  this.stopped = false;
+
   this.raise_interrupt = function(i) {
     if(this.waiting) {
-      this.interrupt = i;
       this.waiting = false;
+      if(this.p.i) {
+        if(i===this.INTERRUPT.IRQ) {
+          i = 0;
+        } 
+      }
+      this.interrupt = i;
       this.start(); 
+    } else if(this.stopped&&(i===this.INTERRUPT.RESET)) {
+      this.stopped = false;
+      this.start();   
     } else {
       this.interrupt = i;
     }
@@ -230,7 +242,8 @@ function CPU_65816() {
                       0x34 : BIT_direct_page_indexed_x, 
                       0x0c : TSB_absolute, 0x04 : TSB_direct_page,
                       0x1c : TRB_absolute, 0x14 : TRB_direct_page,
-                      0x9a : TXS, 0xba : TSX, 0x42: WDM, 0xcb : WAI };
+                      0x9a : TXS, 0xba : TSX, 0x42: WDM, 0xcb : WAI,
+                      0xdb : STP };
 
   /**
    * Take a raw hex string representing the program and execute it.
@@ -349,7 +362,7 @@ function CPU_65816() {
         operation.execute(this,bytes);
       }
 
-      if(this.waiting) 
+      if(this.waiting||this.stopped) 
         executing = false;
     }
   }; 
@@ -451,6 +464,15 @@ var MMU = {
         byte_buffer = [];      
       } 
     }    
+  }
+};
+
+var STP = {
+  bytes_required:function() {
+    return 1;
+  },
+  execute:function(cpu) {
+    cpu.stopped = true;
   }
 };
 
