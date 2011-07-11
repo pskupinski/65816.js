@@ -251,7 +251,8 @@ function CPU_65816() {
   this.execute = function(raw_hex, has_header) {
     this.mmu.load_rom(raw_hex);
     this.r.pc = 0x8000;
- 
+
+    // Skip the header(the first 512 bytes) if there is one present for now.
     if(has_header) {
       this.r.pc += 4096;
     }
@@ -366,12 +367,26 @@ function CPU_65816() {
         executing = false;
     }
   }; 
+
+  this.reset = function() {
+    this.waiting = false;
+    this.stopped = false;
+    this.interrupt = this.INTERRUPT.NO_INTERRUPT;
+    this.r = { a:0, b:0, x:0, y:0, d:0, s:0xff, pc:0, dbr:0, k:0 };
+    this.p = { e:1, c:0, z:0, i:0, d:0, x:0, m:0, v:0, n:0 };
+    this.mmu.reset();  
+  }; 
 }
 
 var MMU = {
   cpu: {},
   memory: { 0: {} },
   memory_mapped_io_devices: {},
+
+  reset: function() {
+    this.memory ={ 0: {} };
+    this.memory_mapped_io_devices = {};
+  },
 
   add_memory_mapped_io_device: function(write_callback, read_callback, bank, 
                                         location) {

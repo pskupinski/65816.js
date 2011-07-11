@@ -13,7 +13,7 @@ $(document).ready(function() {
     updateFields();
   });
   $("#reset").click(function() {
-    cpu = new CPU_65816();
+    cpu.reset();
     $("#hex").val("");
     updateFields();
   });
