@@ -20,6 +20,16 @@ Memory:
 - ROM protection
 - Improve the memory mapped I/O interface and handling
 Display:
-- Using the html page included provide a nice interface for using the cpu 
-  emulator and provide many features helpful for debugging
-- Assembler and disassembler
+- Add the ability to step, pause and stop execution
+- Ability to view the path of operation execution as it executes, like have
+  the hex chars that are being interpreted at the moment highlighted
+- Display a log of the cpu's interpretation process, display what operations
+  it finds and what arguments it finds for those operations in the order they
+  are executed
+- Ability to view what the contents of memory are in a nice fashion
+- Ability to change the contents of registers or memory through the user 
+  interface
+- Ability to load binary files into the emulator through the user interface
+- Improve upon the appearance of the interface
+- Assembler
+- Disassembler
