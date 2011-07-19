@@ -8,14 +8,39 @@ var cpu;
 $(document).ready(function() {
   cpu = new CPU_65816();
   updateFields(); 
+  var can_step = false;
   $("#execute").click(function() {
+    cpu.reset();
     cpu.execute($("#hex").val());
+    $("#load").removeAttr("disabled");
     updateFields();
   });
   $("#reset").click(function() {
     cpu.reset();
     $("#hex").val("");
     updateFields();
+    $("#step").attr("disabled", "disabled");
+    $("#load").removeAttr("disabled");
+  });
+  $("#load").click(function() {
+    cpu.reset();
+    cpu.load_program($("#hex").val());
+    updateFields();
+    can_step = true;
+    $("#step").removeAttr("disabled");
+    $("#load").attr("disabled", "disabled");
+  });
+  $("#step").click(function() {
+    if(can_step) {
+      cpu.executing = true;
+      cpu.step();
+      if(!cpu.executing) {
+        can_step = false;
+        $("#step").attr("disabled", "disabled");
+        $("#load").removeAttr("disabled");
+      }
+      updateFields();
+    }
   });
 });
 
@@ -93,14 +118,15 @@ function updateFields() {
 </div>
 </div>
 <div class="right">
-<h3>Enter your program in hex here:</h3><textarea id="hex"></textarea>
+<h3>Enter your program in hex here:</h3>
+<textarea id="hex"></textarea>
 <br/>
 <button id="execute">Execute</button>
 <button id="reset">Reset</button>
+<button id="load">Load</button>
+<button id="step" disabled="disabled">Step</button>
 <!--
 <button id="stop">Stop</button>
-<button id="pause">Pause</button>
-<button id="step">Step</button>
 -->
 </div>
 </body>

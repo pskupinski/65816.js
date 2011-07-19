@@ -44,6 +44,9 @@ function CPU_65816() {
   this.INTERRUPT = { NO_INTERRUPT: 0, NMI: 1, RESET: 2, ABORT: 3, COP: 4, IRQ: 5, BRK: 6 };
 
   this.interrupt = this.INTERRUPT.NO_INTERRUPT;
+ 
+  // This is used to keep the cpu going if started with start().
+  this.executing = false;
 
   // This is set by the WAI operation to stop execution until an interrupt
   // is received.
@@ -245,10 +248,11 @@ function CPU_65816() {
                       0x9a : TXS, 0xba : TSX, 0x42: WDM, 0xcb : WAI,
                       0xdb : STP };
 
+  
   /**
-   * Take a raw hex string representing the program and execute it.
-   */
-  this.execute = function(raw_hex, has_header) {
+   * Load given program into memory and prepare for execution.
+   */ 
+  this.load_program = function(raw_hex, has_header) {
     this.mmu.load_rom(raw_hex);
     this.r.pc = 0x8000;
 
@@ -256,119 +260,137 @@ function CPU_65816() {
     if(has_header) {
       this.r.pc += 4096;
     }
+  };
 
+  /**
+   * Take a raw hex string representing the program and execute it.
+   */
+  this.execute = function(raw_hex, has_header) {
+    this.load_program(raw_hex, has_header);
     this.start(); 
+  };
+  
+  /**
+   * Step through the processing of a single byte from the current location of
+   * the program counter.
+   * TODO: Refactor the code to only process a single byte per step call
+   */  
+  this.step = function() {
+    if(this.interrupt&&(!this.p.i|(this.interrupt===this.INTERRUPT.NMI))) {
+      // Load the related interrupt vector in page 0xff of bank zero.
+      if(!this.p.e) {
+        this.mmu.push_byte(this.r.k); 
+      }
+      this.mmu.push_byte(this.r.pc>>8);
+      this.mmu.push_byte(this.r.pc&0xff);
+      var p_byte = (this.p.n<<7)|(this.p.v<<6)|(this.p.m<<5)|(this.p.x<<4)|
+                   (this.p.d<<3)|(this.p.i<<2)|(this.p.z<<1)|this.p.c;
+      this.mmu.push_byte(p_byte);
+      if(!this.p.e) 
+        this.p.d = 0;
+      this.p.i = 1;
+      this.r.k = 0;
+       
+      // Look for where to jump to for the interrupt.  
+      if(this.p.e) {
+        // NMI
+        if(this.interrupt===this.INTERRUPT.NMI) {
+          var low_byte = this.mmu.read_byte_long(0xfffa, 0);
+          var high_byte = this.mmu.read_byte_long(0xfffb, 0);  
+          this.r.pc = (high_byte<<8)|low_byte;
+        // RESET
+        } else if(this.interrupt===this.INTERRUPT.RESET) {
+          var low_byte = this.mmu.read_byte_long(0xfffc, 0);
+          var high_byte = this.mmu.read_byte_long(0xfffd, 0);  
+          this.r.pc = (high_byte<<8)|low_byte;
+        // ABORT
+        } else if(this.interrupt===this.INTERRUPT.ABORT) {
+          var low_byte = this.mmu.read_byte_long(0xfff8, 0);
+          var high_byte = this.mmu.read_byte_long(0xfff9, 0);  
+          this.r.pc = (high_byte<<8)|low_byte;
+        // COP
+        } else if(this.interrupt===this.INTERRUPT.COP) {
+          var low_byte = this.mmu.read_byte_long(0xfff4, 0);
+          var high_byte = this.mmu.read_byte_long(0xfff5, 0);  
+          this.r.pc = (high_byte<<8)|low_byte;
+        // IRQ or BRK
+        } else if(this.interrupt===this.INTERRUPT.IRQ |
+                  this.interrupt==this.INTERRUPT.BRK) {
+          var low_byte = this.mmu.read_byte_long(0xfffe, 0);
+          var high_byte = this.mmu.read_byte_long(0xffff, 0);  
+          this.r.pc = (high_byte<<8)|low_byte;
+        }
+      } else {
+        // NMI
+        if(this.interrupt===this.INTERRUPT.NMI) {
+          var low_byte = this.mmu.read_byte_long(0xffea, 0);
+          var high_byte = this.mmu.read_byte_long(0xffeb, 0);  
+          this.r.pc = (high_byte<<8)|low_byte;
+        // ABORT
+        } else if(this.interrupt===this.INTERRUPT.ABORT) {
+          var low_byte = this.mmu.read_byte_long(0xffe8, 0);
+          var high_byte = this.mmu.read_byte_long(0xffe9, 0);  
+          this.r.pc = (high_byte<<8)|low_byte;
+        // COP
+        } else if(this.interrupt===this.INTERRUPT_COP) {
+          var low_byte = this.mmu.read_byte_long(0xffe4, 0);
+          var high_byte = this.mmu.read_byte_long(0xffe5, 0);  
+          this.r.pc = (high_byte<<8)|low_byte;
+        // IRQ
+        } else if(this.interrupt===this.INTERRUPT.IRQ) {
+          var low_byte = this.mmu.read_byte_long(0xffee, 0);
+          var high_byte = this.mmu.read_byte_long(0xffef, 0);  
+          this.r.pc = (high_byte<<8)|low_byte;
+        // BRK
+        } else if(this.interrupt===this.INTERRUPT.BRK) {
+          var low_byte = this.mmu.read_byte_long(0xffe6, 0);
+          var high_byte = this.mmu.read_byte_long(0xffe7, 0);  
+          this.r.pc = (high_byte<<8)|low_byte;
+        }
+      }
+
+      this.interrupt = this.INTERRUPT.NO_INTERRUPT;
+    }
+ 
+    var b = this.mmu.read_byte_long(this.r.pc, this.r.k); 
+    this.r.pc++;
+
+    // If we reach the end of the code then stop everything.
+    if(b==null) {
+      this.executing = false;
+      return;
+    }
+    var operation = this.opcode_map[b];
+    // Check if unsupported opcode.
+    if(operation==null) {
+      this.executing = false;
+      return;
+    }
+    var bytes_required = operation.bytes_required(this);
+    if(bytes_required===1) {
+      operation.execute(this);
+    } else {
+      var bytes = [];
+      for(var i = 1; i < bytes_required; i++) {
+        bytes.push(this.mmu.read_byte_long(this.r.pc, this.r.k));
+        this.r.pc++;
+      }
+      operation.execute(this,bytes);
+    }
+
+    if(this.waiting||this.stopped) 
+      this.executing = false;
   };
 
   this.start = function() {
-    var executing = true;
-    while(executing) {
-      if(this.interrupt&&(!this.p.i|(this.interrupt===this.INTERRUPT.NMI))) {
-        // Load the related interrupt vector in page 0xff of bank zero.
-        if(!this.p.e) {
-          this.mmu.push_byte(this.r.k); 
-        }
-        this.mmu.push_byte(this.r.pc>>8);
-        this.mmu.push_byte(this.r.pc&0xff);
-        var p_byte = (this.p.n<<7)|(this.p.v<<6)|(this.p.m<<5)|(this.p.x<<4)|
-                    (this.p.d<<3)|(this.p.i<<2)|(this.p.z<<1)|this.p.c;
-        this.mmu.push_byte(p_byte);
-        if(!this.p.e) 
-          this.p.d = 0;
-        this.p.i = 1;
-        this.r.k = 0;
-       
-        // Look for where to jump to for the interrupt.  
-        if(this.p.e) {
-          // NMI
-          if(this.interrupt===this.INTERRUPT.NMI) {
-            var low_byte = this.mmu.read_byte_long(0xfffa, 0);
-            var high_byte = this.mmu.read_byte_long(0xfffb, 0);  
-            this.r.pc = (high_byte<<8)|low_byte;
-          // RESET
-          } else if(this.interrupt===this.INTERRUPT.RESET) {
-            var low_byte = this.mmu.read_byte_long(0xfffc, 0);
-            var high_byte = this.mmu.read_byte_long(0xfffd, 0);  
-            this.r.pc = (high_byte<<8)|low_byte;
-          // ABORT
-          } else if(this.interrupt===this.INTERRUPT.ABORT) {
-            var low_byte = this.mmu.read_byte_long(0xfff8, 0);
-            var high_byte = this.mmu.read_byte_long(0xfff9, 0);  
-            this.r.pc = (high_byte<<8)|low_byte;
-          // COP
-          } else if(this.interrupt===this.INTERRUPT.COP) {
-            var low_byte = this.mmu.read_byte_long(0xfff4, 0);
-            var high_byte = this.mmu.read_byte_long(0xfff5, 0);  
-            this.r.pc = (high_byte<<8)|low_byte;
-          // IRQ or BRK
-          } else if(this.interrupt===this.INTERRUPT.IRQ |
-                    this.interrupt==this.INTERRUPT.BRK) {
-            var low_byte = this.mmu.read_byte_long(0xfffe, 0);
-            var high_byte = this.mmu.read_byte_long(0xffff, 0);  
-            this.r.pc = (high_byte<<8)|low_byte;
-          }
-        } else {
-          // NMI
-          if(this.interrupt===this.INTERRUPT.NMI) {
-            var low_byte = this.mmu.read_byte_long(0xffea, 0);
-            var high_byte = this.mmu.read_byte_long(0xffeb, 0);  
-            this.r.pc = (high_byte<<8)|low_byte;
-          // ABORT
-          } else if(this.interrupt===this.INTERRUPT.ABORT) {
-            var low_byte = this.mmu.read_byte_long(0xffe8, 0);
-            var high_byte = this.mmu.read_byte_long(0xffe9, 0);  
-            this.r.pc = (high_byte<<8)|low_byte;
-          // COP
-          } else if(this.interrupt===this.INTERRUPT_COP) {
-            var low_byte = this.mmu.read_byte_long(0xffe4, 0);
-            var high_byte = this.mmu.read_byte_long(0xffe5, 0);  
-            this.r.pc = (high_byte<<8)|low_byte;
-          // IRQ
-          } else if(this.interrupt===this.INTERRUPT.IRQ) {
-            var low_byte = this.mmu.read_byte_long(0xffee, 0);
-            var high_byte = this.mmu.read_byte_long(0xffef, 0);  
-            this.r.pc = (high_byte<<8)|low_byte;
-          // BRK
-          } else if(this.interrupt===this.INTERRUPT.BRK) {
-            var low_byte = this.mmu.read_byte_long(0xffe6, 0);
-            var high_byte = this.mmu.read_byte_long(0xffe7, 0);  
-            this.r.pc = (high_byte<<8)|low_byte;
-          }
-        }
-
-        this.interrupt = this.INTERRUPT.NO_INTERRUPT;
-      }
- 
-      var b = this.mmu.read_byte_long(this.r.pc, this.r.k); 
-      this.r.pc++;
-
-      // If we reach the end of the code then stop everything.
-      if(b==null) {
-        break;
-      }
-      var operation = this.opcode_map[b];
-      // Check if unsupported opcode.
-      if(operation==null) {
-        break;
-      }
-      var bytes_required = operation.bytes_required(this);
-      if(bytes_required===1) {
-        operation.execute(this);
-      } else {
-        var bytes = [];
-        for(var i = 1; i < bytes_required; i++) {
-          bytes.push(this.mmu.read_byte_long(this.r.pc, this.r.k));
-          this.r.pc++;
-        }
-        operation.execute(this,bytes);
-      }
-
-      if(this.waiting||this.stopped) 
-        executing = false;
+    this.executing = true;
+    while(this.executing) {
+       this.step();
     }
   }; 
 
   this.reset = function() {
+    this.executing = false;
     this.waiting = false;
     this.stopped = false;
     this.interrupt = this.INTERRUPT.NO_INTERRUPT;
