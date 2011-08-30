@@ -73,8 +73,8 @@ function CPU_65816() {
       this.interrupt = i;
     }
   };
- 
-  this.mmu = MMU;
+
+  this.mmu = new MMU();
   this.mmu.cpu = this; 
 
   this.opcode_map = { 0xfb : XCE, 0x18 : CLC, 0x78 : SEI, 0x38 : SEC,
@@ -400,25 +400,25 @@ function CPU_65816() {
   }; 
 }
 
-var MMU = {
-  cpu: {},
-  memory: { 0: {} },
-  memory_mapped_io_devices: {},
+function MMU() {
+  this.cpu = {};
+  this.memory = { 0: {} };
+  this.memory_mapped_io_devices = {};
 
-  reset: function() {
+  this.reset = function() {
     this.memory ={ 0: {} };
     this.memory_mapped_io_devices = {};
-  },
+  };
 
-  add_memory_mapped_io_device: function(write_callback, read_callback, bank, 
-                                        location) {
+  this.add_memory_mapped_io_device = function(write_callback, read_callback,
+                                        bank, location) {
     if(typeof this.memory_mapped_io_devices[bank] === 'undefined') {
       this.memory_mapped_io_devices[bank] = {};
     }
     this.memory_mapped_io_devices[bank][location] = { write: write_callback, read: read_callback }; 
-  },
+  };
 
-  pull_byte: function() {
+  this.pull_byte = function() {
     if(this.cpu.p.e) {
       if(this.cpu.r.s===0xff) {
         this.cpu.r.s = 0;
@@ -429,9 +429,9 @@ var MMU = {
     } else {
       return this.read_byte(++this.cpu.r.s);
     }
-  },
+  };
 
-  push_byte: function(b) {
+  this.push_byte = function(b) {
     if(this.cpu.p.e) {
       if(this.cpu.r.s===0) {
 	this.store_byte(0x100, b);
@@ -442,9 +442,9 @@ var MMU = {
     } else {
       this.store_byte(this.cpu.r.s--, b);
     }
-  },
+  };
 
-  read_byte: function(location) {
+  this.read_byte = function(location) {
     var device_map_at_bank = this.memory_mapped_io_devices[this.cpu.r.dbr];
     if(device_map_at_bank!=null) {
       var device = device_map_at_bank[location];
@@ -452,9 +452,9 @@ var MMU = {
         return device.read(this.cpu);   
     } 
       return this.memory[this.cpu.r.dbr][location];
-  },
+  };
  
-  read_byte_long: function(location, bank) {
+  this.read_byte_long = function(location, bank) {
     if(typeof this.memory[bank] === 'undefined') {
       this.memory[bank] = {};
     }
@@ -465,9 +465,9 @@ var MMU = {
         return device.read(this.cpu);   
     }
     return this.memory[bank][location];
-  },
+  };
 
-  store_byte: function(location, b) {
+  this.store_byte = function(location, b) {
     var device_map_at_bank = this.memory_mapped_io_devices[this.cpu.r.dbr];
     if(device_map_at_bank!=null) {
       var device = device_map_at_bank[location];
@@ -475,9 +475,9 @@ var MMU = {
         device.write(this.cpu, b);
     } 
     this.memory[this.cpu.r.dbr][location] = b;
-  },
+  };
 
-  store_byte_long: function(location, bank, b) {
+  this.store_byte_long = function(location, bank, b) {
     if(typeof this.memory[bank] === 'undefined') {
       this.memory[bank] = {};
     }
@@ -488,9 +488,9 @@ var MMU = {
         device.write(this.cpu, b);
     } 
     this.memory[bank][location] = b;
-  },
+  };
 
-  load_rom: function(raw_hex) {
+  this.load_rom = function(raw_hex) {
     var loc = 0x8000;
     var byte_buffer = [];
     for(var i = 0; i < raw_hex.length; i++) {
@@ -501,8 +501,8 @@ var MMU = {
         byte_buffer = [];      
       } 
     }    
-  }
-};
+  };
+}
 
 var STP = {
   bytes_required:function() {
