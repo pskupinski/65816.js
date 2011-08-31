@@ -4722,7 +4722,7 @@ var LDA_direct_page_indirect = {
     } else {
       var low_byte_loc = cpu.mmu.read_byte(location);
       var high_byte_loc = cpu.mmu.read_byte(location+1);
-      var absolute_location = high_byte_loc | low_byte_loc;
+      var absolute_location = (high_byte_loc<<8) | low_byte_loc;
       var low_byte = cpu.mmu.read_byte(absolute_location);
       var high_byte = cpu.mmu.read_byte(absolute_location+1);
       cpu.r.a = (high_byte<<8) | low_byte;

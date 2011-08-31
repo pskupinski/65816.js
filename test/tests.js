@@ -126,10 +126,34 @@ function test_lda() {
                             "$ff after $fd is indexed with the x register("+
                             "which is 1) in 16-bit memory/accumulator mode.");
     equals(cpu.p.m, 0, "m flag of the p status register should be 0 for "+
-                       "16-bit memory/accumulator mdoe.");
+                       "16-bit memory/accumulator mode.");
     equals(cpu.p.e, 0, "Hidden e flag of the p status register should be 0 "+
                        "for native mode.");
   }); 
+  test("Make sure LDA indirect given a direct page address loads an 8-bit "+
+       "value in 8-bit memory/accumulator mode.", function() {
+    var cpu = new CPU_65816();
+    cpu.execute("18fba9ff85fea90a85ffa9068dff0aa900b2fe");
+    equals(cpu.r.a, 6, "The accumulator should be 6 when LDA loads an 8-bit "+
+                       "value using an indirect address in 8-bit mode "+
+                       "memory/accumulator mode.");
+    equals(cpu.p.m, 1, "m flag of the p status register should be 1 for "+
+                       "8-bit memory/accumulator mode.");
+    equals(cpu.p.e, 0, "Hidden e flag of the p status register should be 0 "+
+                       "for native mode.");
+  });
+  test("Make sure LDA indirect given a direct page address loads a 16-bit "+
+       "value in 16-bit memory/accumulator mode.", function() {
+    var cpu = new CPU_65816();
+    cpu.execute("18fbc220a9ff0a85fea9ffff8dff0aa90000b2fe");
+    equals(cpu.r.a, 0xffff, "The accumulator should be 0xffff when LDA loads "+
+                            "a 16-bit value using an indirect address "+
+                            "loaded from a direct page address.");
+    equals(cpu.p.m, 0, "m flag of the p status register should be 0 for "+
+                       "16-bit memory/accumulator mode.");
+    equals(cpu.p.e, 0, "Hidden e flag of the p status register should be 0 "+
+                       "for native mode.");
+  });
 }
 
 function test_emulation_mode() {
