@@ -188,6 +188,58 @@ function test_lda() {
     equals(cpu.p.e, 0, "Hidden e flag of the p status register should be 0 "+
                        "for native mode.");
   });
+  test("Ensure that LDA absolute indexed by the y register works for 8-bit "+
+       "memory/acccumulator mode.", function() {
+    var cpu = new CPU_65816();
+    cpu.execute("18fba9fe8dff0aa002a900b9fd0a");
+    equals(cpu.r.a, 0xfe, "The accumulator should be 0xfe when LDA loads an "+
+                          "8-bit value from $0aff using absolute indexed y "+
+                          "addressing mode."); 
+    equals(cpu.r.y, 2, "The y register should be 2 to properly load the "+
+                       "value added to the base address.");
+    equals(cpu.p.m, 1, "The m flag of the p status register should be 1 for "+
+                       "8-bit memory/accumulator mode.");
+    equals(cpu.p.e, 0, "Hidden e flag of the p status register should be 0 "+
+                       "for native mode.");
+  });
+  test("Ensure that LDA absolute indexed by the y register works for 16-bit "+
+       "memory/accumulator mode.", function() {
+    var cpu = new CPU_65816();
+    cpu.execute("18fbc220a9fefa8dff0aa003a90000b9fc0a");
+    equals(cpu.r.a, 0xfafe, "The accumulator should be 0xfafe when LDA loads "+
+                            "a 16-bit value from $0aff using absolute "+
+                            "indexed y addressing mode.");
+    equals(cpu.r.y, 3, "The y register should be 3 to properly load the "+
+                       "value added to the base address.");
+    equals(cpu.p.m, 0, "The m flag of the p status register should be 0 for "+
+                       "16-bit memory/accumulator mode.");
+    equals(cpu.p.e, 0, "Hidden e flag of the p status register should be 0 "+
+                       "for native mode.");
+  });
+  test("Ensure that LDA stack relative works for 8-bit memory/accumulator "+
+       "mode.", function() {
+    var cpu = new CPU_65816();
+    cpu.execute("18fba9fe48a90148a900a302");
+    equals(cpu.r.a, 0xfe, "The accumulator should be 0xfe when LDA loads "+
+                          "an 8-bit value from the stack using LDA stack "+
+                          "relative addressing mode.");
+    equals(cpu.p.m, 1, "The m flag of the p status register should be 1 for "+
+                       "8-bit memory/accumulator mode.");
+    equals(cpu.p.e, 0, "Hidden e flag of the p status register should be 0 "+
+                       "for native mode.");
+  });
+  test("Ensure that LDA stack relative works for 16-bit memory/accumulator "+
+       "mode.", function() {
+    var cpu = new CPU_65816();
+    cpu.execute("18fbc220a9fefa48a9010048a90000a303");
+    equals(cpu.r.a, 0xfafe, "The accumulator should be 0xfafe when LDA "+
+                            "loads a 16-bit value from the stack using LDA "+
+                            "stack relative addressing mode.");
+    equals(cpu.p.m, 0, "The m flag of the p status register should be 0 for "+
+                       "16-bit memory/accumulator mode.");
+    equals(cpu.p.e, 0, "Hidden e flag of the p status register should be 0 "+
+                       "for native mode.");
+  });
 }
 
 function test_emulation_mode() {
