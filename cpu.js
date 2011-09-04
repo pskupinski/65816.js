@@ -3610,22 +3610,46 @@ var ADC_const = {
   execute:function(cpu, bytes) {
     var old_a = cpu.r.a; 
     if(cpu.p.e|cpu.p.m) {
-      cpu.r.a += bytes[0] + cpu.p.c;
-      if(cpu.r.a & 0x100) {
-        cpu.p.c = 1;
+      if(cpu.p.d) {
+        // Form a decimal number out of a.
+        var ones = cpu.r.a & 0x0f;        
+        var tens = cpu.r.a >>4;
+        var dec_a = (tens*10)+ones;
+      
+        // Form a decimal number out of the argument.
+        ones = bytes[0] & 0x0f;
+        tens = bytes[0] >>4;
+        var dec_arg = (tens*10)+ones;
+        var result = dec_a + dec_arg;
+        // Check for decimal overflow.
+        if(result>99) {
+          result -= 99;
+          cpu.p.c = 1; 
+        }
+        var digits = result.toString(10).split("");
+        var i = 0;
+        cpu.r.a = 0;
+        for(i=0;i<digits.length;i++) {
+          cpu.r.a += (digits[i]-0)*Math.pow(16,digits.length-i-1);
+        }
       } else {
-        cpu.p.c = 0;
-      } 
-      cpu.r.a &= 0xff;
-      cpu.p.n = cpu.r.a >> 7;
+        cpu.r.a += bytes[0] + cpu.p.c;
+        if(cpu.r.a & 0x100) {
+          cpu.p.c = 1;
+        } else {
+          cpu.p.c = 0;
+        } 
+        cpu.r.a &= 0xff;
+        cpu.p.n = cpu.r.a >> 7;
        
-      // Check for signed overflow.
-      // If they started with the same sign and then the resulting sign is
-      // different then we have a signed overflow.
-      if((!((old_a ^ bytes[0]) & 0x80)) && ((cpu.r.a ^ old_a) & 0x80)) {
-        cpu.p.v = 1;
-      } else {
-        cpu.p.v = 0;
+        // Check for signed overflow.
+        // If they started with the same sign and then the resulting sign is
+        // different then we have a signed overflow.
+        if((!((old_a ^ bytes[0]) & 0x80)) && ((cpu.r.a ^ old_a) & 0x80)) {
+          cpu.p.v = 1;
+        } else {
+          cpu.p.v = 0;
+        }
       }
     } else {
       var argument = (bytes[1]<<8)|bytes[0];

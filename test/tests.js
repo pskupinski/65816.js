@@ -15,7 +15,7 @@
  */
 
 function run_tests() {
-  test_lda();
+  test_lda(); 
   test_rep();
   test_sep();
   test_branching();
@@ -565,6 +565,52 @@ function test_adc() {
     equals(cpu.p.n, 1, "0x7fff + 0x0001 should set the negative(n) bit when "+
                        "using ADC");   
 
+  });
+  test("Test that ADC handles decimal mode with legal BCD numbers in 8-bit "+
+       "memory/accumulator mode with single digit numbers.", function() {
+    var cpu = new CPU_65816();
+    cpu.execute("18fb18f8a9056905");
+    equals(cpu.r.a, 0x10, "0x05 + 0x05 should result in 0x10 with decimal "+
+                          "mode on and with 8-bit memory/accumulator mode.");
+    equals(cpu.p.c, 0, "The carry flag of the p status register should be "+
+                       "clear after no decimal overflow.");
+    equals(cpu.p.d, 1, "Decimal mode should be set to 1 in the p status "+
+                       "register.");
+    equals(cpu.p.m, 1, "The m flag of the p status register should be 1 for "+
+                       "8-bit memory/accumulator mode.");
+    equals(cpu.p.e, 0, "The hidden e flag of the p status register should "+
+                       "be 0 for native mode.");
+  });
+  test("Test that ADC handles decimal mode with legal BCD numbers in 8-bit "+
+       "memory/accumulator mode with double digit numbers.", function() {
+    var cpu = new CPU_65816();
+    cpu.execute("18fb18f8a9156926");
+    equals(cpu.r.a, 0x41, "0x15 + 0x26 should result in 0x41 with decimal "+
+                          "mode on and with 8-bit memory/accumulator mode.");
+    equals(cpu.p.c, 0, "The carry flag of the p status register should be "+
+                       "clear after no decimal overflow.");
+    equals(cpu.p.d, 1, "Decimal mode should be set to 1 in the p status "+
+                       "register.");
+    equals(cpu.p.m, 1, "The m flag of the p status register should be 1 for "+
+                       "8-bit memory/accumulator mode.");
+    equals(cpu.p.e, 0, "The hidden e flag of the p status register should "+
+                       "be 0 for native mode.");
+  });
+  test("Test that ADC handles decimal mode with legal BCD numbers in 8-bit "+
+       "memory/accumulator mode when adding two numbers that cause an "+
+       "overflow.", function() {
+    var cpu = new CPU_65816();
+    cpu.execute("18fb18f8a9556960");
+    equals(cpu.r.a, 0x16, "0x55 + 0x60 should result in 0x16 with decimal "+
+                          "mode on and with 8-bit memory/accumulator mode.");
+    equals(cpu.p.c, 1, "The carry flag of the p status register should be "+
+                       "set after the decimal overflow.");
+    equals(cpu.p.d, 1, "Decimal mode should be set to 1 in the p status "+
+                       "register.");
+    equals(cpu.p.m, 1, "The m flag of the p status register should be 1 for "+
+                       "8-bit memory/accumulator mode.");
+    equals(cpu.p.e, 0, "The hidden e flag of the p status register should "+
+                       "be 0 for native mode.");
   });
 }
 

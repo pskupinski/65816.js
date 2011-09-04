@@ -9,7 +9,8 @@ Testing:
 - Tests needed for the numerous other operations added
 CPU:
 - More work on interrupts
-- Decimal mode support
+- Decimal mode support(figure out details as to how it handles illegal BCD
+  numbers)
 - Have each operation return the number of cycles used by the execute function.
 - Optimization
 Memory:
