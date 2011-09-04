@@ -373,7 +373,7 @@ function test_sbc() {
   test("Test normal subtraction of two 8-bit numbers that don't cause a "+
        "borrow.", function() {
     var cpu = new CPU_65816();
-    cpu.execute("18fbe23018a901e901");
+    cpu.execute("18fbe230a90138e901");
     equals(cpu.r.a, 0, "0x01 - 0x01 should result in zero when using "+
                        "SBC");
     equals(cpu.p.z, 1, "0x01 - 0x01 should set the zero(z) bit when "+
@@ -389,7 +389,7 @@ function test_sbc() {
   test("Test normal subtraction of two 16-bit numbers that don't cause a "+
        "borrow.", function() {
     var cpu = new CPU_65816();
-    cpu.execute("18fbc23018a90100e90100");
+    cpu.execute("18fbc230a9010038e90100");
     equals(cpu.r.a, 0, "0x0001 - 0x0001 should result in zero when using "+
                        "SBC");
     equals(cpu.p.z, 1, "0x0001 - 0x0001 should set the zero(z) bit when "+
@@ -404,7 +404,7 @@ function test_sbc() {
   test("Test subtraction that triggers a borrow with 8-bit numbers", 
        function() {
     var cpu = new CPU_65816();
-    cpu.execute("18fbe23018a9d0e9ef");
+    cpu.execute("18fbe230a9d038e9ef");
     equals(cpu.r.a, 0xe1, "0xd0 - 0xef should set the accumulator to 0xe1 "+
                           "when using SBC");
     equals(cpu.p.n, 1,    "0xd0 - 0xef should set the negative(n) bit when "+ 
@@ -419,7 +419,7 @@ function test_sbc() {
   test("Test subtraction that triggers a borrow with 16-bit numbers", 
        function() {
     var cpu = new CPU_65816();
-    cpu.execute("18fbc23018a900d0e900ef");
+    cpu.execute("18fbc230a900d038e900ef");
     equals(cpu.r.a, 0xe100, "0xd000 - 0xef00 should set the accumulator to "+
                             "0xe0ff when using SBC");
     equals(cpu.p.n, 1, "0xd000 - 0xef00 should set the negative(n) bit when "+ 
@@ -430,6 +430,90 @@ function test_sbc() {
                        "using SBC");
     equals(cpu.p.c, 0, "0xd000 - 0xef00 should not set the carry(c) bit when "+
                        "using SBC");  
+  });
+  test("Test subtraction with decimal mode on with two single digit 8-bit "+
+       "numbers.", function() {
+    var cpu = new CPU_65816();
+    cpu.execute("18fbf8a90938e905");
+    equals(cpu.r.a, 4, "The accumulator should be 4 after subtracting 0x5 "+
+                       "0x9 with decimal mode on with 8-bit "+
+                       "memory/accumulator mode.");
+    equals(cpu.p.c, 1, "The carry bit should be set after no borrow is "+
+                       "triggered."); 
+    equals(cpu.p.m, 1, "The m flag of the p status register should be one "+
+                       "for 8-bit memory/accumulator mode.");
+    equals(cpu.p.e, 0, "The hidden e flag of the p status register should "+
+                       "be zero for native mode.");
+  });
+  test("Test subtraction with decimal mode on with two double digit 8-bit "+
+       "numbers.", function() {
+    var cpu = new CPU_65816();
+    cpu.execute("18fbf8a99038e949");
+    equals(cpu.r.a, 0x41, "The accumulator should be 41 after subtracting 0x49 "+
+                          "from 0x90 with decimal mode on with 8-bit "+
+                          "memory/accumulator mode.");
+    equals(cpu.p.c, 1, "The carry bit should be set after no borrow is "+
+                       "triggered."); 
+    equals(cpu.p.m, 1, "The m flag of the p status register should be one "+
+                       "for 8-bit memory/accumulator mode.");
+    equals(cpu.p.e, 0, "The hidden e flag of the p status register should "+
+                       "be zero for native mode.");
+  });
+  test("Test subtraction with decimal mode on with 8-bit numbers that causes "+
+       "a borrow.", function() {
+    var cpu = new CPU_65816();
+    cpu.execute("18fbf8a91038e920");
+    equals(cpu.r.a, 0x90, "The accumulator should be 0x90 after subtracting "+
+                          "0x20 from 0x10 with decimal and 8-bit "+
+                          "memory/accumulator modes.");
+    equals(cpu.p.c, 0, "The carry bit should be clear after a borrow is "+
+                       "triggered."); 
+    equals(cpu.p.m, 1, "The m flag of the p status register should be one "+
+                       "for 8-bit memory/accumulator mode.");
+    equals(cpu.p.e, 0, "The hidden e flag of the p status register should "+
+                       "be zero for native mode.");
+  });
+  test("Test subtraction of two single digit 16-bit numbers with decimal "+
+       "mode set.", function() {
+    var cpu = new CPU_65816();
+    cpu.execute("18fbc220f8a9050038e90200");
+    equals(cpu.r.a, 0x03, "The accumulator should be 0x03 after subtracting "+
+                          "0x02 from 0x05 with decimal and 16-bit "+
+                          "memory/accumulator modes.");
+    equals(cpu.p.c, 1, "The carry bit should be set after no borrow is "+
+                       "triggered."); 
+    equals(cpu.p.m, 0, "The m flag of the p status register should be zero "+
+                       "for 16-bit memory/accumulator mode.");
+    equals(cpu.p.e, 0, "The hidden e flag of the p status register should "+
+                       "be zero for native mode.");
+  });
+  test("Test subtraction of two four digit 16-bit numbers with decimal "+
+       "mode set.", function() {
+    var cpu = new CPU_65816();
+    cpu.execute("18fbc220f8a9999938e91111");
+    equals(cpu.r.a, 0x8888, "The accumulator should be 0x8888 after "+
+                            "subtracting 0x1111 from 0x9999 with decimal "+
+                            "and 16-bit memory/accumulator modes.");
+    equals(cpu.p.c, 1, "The carry bit should be set after no borrow is "+
+                       "triggered."); 
+    equals(cpu.p.m, 0, "The m flag of the p status register should be zero "+
+                       "for 16-bit memory/accumulator mode.");
+    equals(cpu.p.e, 0, "The hidden e flag of the p status register should "+
+                       "be zero for native mode.");
+  });
+  test("Test subtraction of two four digit 16-bit numbers with decimal "+
+       "mode set that causes a borrow.", function() {
+    var cpu = new CPU_65816();
+    cpu.execute("18fbc220f8a9111138e99999");
+    equals(cpu.r.a, 0x1112, "The accumulator should be 0x1112 after "+
+                            "subtracting 0x9999 from 0x1111 with decimal "+
+                            "and 16-bit memory/accumulator modes.");
+    equals(cpu.p.c, 0, "The carry bit should be clear after a borrow is "+
+                       "triggered."); 
+    equals(cpu.p.m, 0, "The m flag of the p status register should be zero "+
+                       "for 16-bit memory/accumulator mode.");
+    equals(cpu.p.e, 0, "The hidden e flag of the p status register should "+
+                       "be zero for native mode.");
   });
 }
 

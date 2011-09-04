@@ -3,14 +3,14 @@ Testing:
 - More tests for CMP/CPY/CPX operations
 - Tests needed for JMP operations
 - Tests needed for LD* and ST* operations
+- Tests needed for bank/page wrapping
 - Tests needed for IN* and DE* operations
 - Tests needed for T** transfer operations
 - Tests needed for interrupt support
 - Tests needed for the numerous other operations added
 CPU:
-- More work on interrupts
-- Decimal mode support(figure out details as to how it handles illegal BCD
-  numbers)
+- Figure out the exact details of how the 65816 handles illegal BCD numbers
+  when decimal mode is set
 - Have each operation return the number of cycles used by the execute function.
 - Optimization
 Memory:
@@ -18,8 +18,6 @@ Memory:
   settings
 - Page wrapping or not wrapping for certain addressing modes and with certain
   settings
-- ROM protection
-- Improve the memory mapped I/O interface and handling
 Display:
 - Add the ability to step, pause and stop execution
 - Ability to view the path of operation execution as it executes, like have

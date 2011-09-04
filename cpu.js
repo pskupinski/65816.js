@@ -3227,44 +3227,109 @@ var SBC_const = {
   },
   execute:function(cpu, bytes) {
     var old_a = cpu.r.a;
-    if(cpu.p.e|cpu.p.m) {
-      cpu.r.a -= bytes[0] - cpu.p.c;
-      if(cpu.r.a < 0) {
-        cpu.p.c = 0; 
-        cpu.r.a = 0x100 + cpu.r.a;
-      } else {
-        cpu.p.c = 1;
-      }
-      cpu.p.n = cpu.r.a >> 7;  
+    var temp = 0;
+    if(cpu.p.c===0) 
+      temp = 1;
 
-      // Check for signed overflow.
-      // If they started with the same sign and then the resulting sign is
-      // different then we have a signed overflow.
-      if((!((old_a ^ bytes[0]) & 0x80)) && ((cpu.r.a ^ old_a) & 0x80)) {
-        cpu.p.v = 1;
+    if(cpu.p.e|cpu.p.m) {
+      if(cpu.p.d) {
+         // Form a decimal number out of a.
+        var ones = cpu.r.a & 0x0f;        
+        var tens = cpu.r.a >> 4;
+        var dec_a = (tens*10)+ones;
+      
+        // Form a decimal number out of the argument.
+        ones = bytes[0] & 0x0f;
+        tens = bytes[0] >> 4;
+        var dec_arg = (tens*10)+ones;
+
+        var result = dec_a - dec_arg - temp;
+        // Check for decimal overflow.
+        if(result<0) {
+          result += 100;
+          cpu.p.c = 0; 
+        } else {
+          cpu.p.c = 1;
+        }
+        var digits = result.toString(10).split("");
+        var i = 0;
+        cpu.r.a = 0;
+        for(i=0;i<digits.length;i++) {
+          cpu.r.a += (digits[i]-0)*Math.pow(16,digits.length-i-1);
+        }
       } else {
-        cpu.p.v = 0;
+        cpu.r.a -= bytes[0] - temp;
+        if(cpu.r.a < 0) {
+          cpu.p.c = 0; 
+          cpu.r.a = 0x100 + cpu.r.a;
+        } else {
+          cpu.p.c = 1;
+        }
+        cpu.p.n = cpu.r.a >> 7;  
+
+        // Check for signed overflow.
+        // If they started with the same sign and then the resulting sign is
+        // different then we have a signed overflow.
+        if((!((old_a ^ bytes[0]) & 0x80)) && ((cpu.r.a ^ old_a) & 0x80)) {
+          cpu.p.v = 1;
+        } else {
+          cpu.p.v = 0;
+        }
       }
     } else {
       var argument = (bytes[1]<<8)|bytes[0]; 
-      cpu.r.a -= argument - cpu.p.c;
-      if(cpu.r.a < 0) {
-        cpu.p.c = 0; 
-        cpu.r.a = 0x10000 + cpu.r.a;
-      } else {
-        cpu.p.c = 1;
-      }
-      cpu.p.n = cpu.r.a >> 15;  
+      var temp = 0;
+      if(cpu.p.c===0)
+        temp = 1;
 
-      // Check for signed overflow.
-      // If they started with the same sign and then the resulting sign is
-      // different then we have a signed overflow.
-      if((!((old_a ^ argument) & 0x8000)) && ((cpu.r.a ^ old_a) & 0x8000)) {
-        cpu.p.v = 1;
+      if(cpu.p.d) {
+        // Form a decimal number out of a.
+        var ones = cpu.r.a & 0xf;
+        var tens = (cpu.r.a >>4) & 0xf;
+        var hundreds = (cpu.r.a >> 8) & 0xf;
+        var thousands = (cpu.r.a >> 12) & 0xf;
+        var dec_a = (thousands*1000)+(hundreds*100)+(tens*10)+ones;
+      
+        // Form a decimal number out of the argument.
+        ones = argument & 0xf;
+        tens = (argument >> 4) & 0xf;
+        hundreds = (argument >> 8) & 0xf;
+        thousands = (argument >> 12) & 0xf;
+        var dec_arg = (thousands*1000)+(hundreds*100)+(tens*10)+ones;
+        var result = dec_a - dec_arg - temp;
+        // Check for decimal overflow.
+        if(result<0) {
+          result += 10000;
+          cpu.p.c = 0; 
+        } else {
+          cpu.p.c = 1;
+        }
+        var digits = result.toString(10).split("");
+        var i = 0;
+        cpu.r.a = 0;
+        for(i=0;i<digits.length;i++) {
+          cpu.r.a += (digits[i]-0)*Math.pow(16,digits.length-i-1);
+        }
       } else {
-        cpu.p.v = 0;
-      }     
-    } 
+        cpu.r.a -= argument - temp;
+        if(cpu.r.a < 0) {
+          cpu.p.c = 0; 
+          cpu.r.a = 0x10000 + cpu.r.a;
+        } else {
+          cpu.p.c = 1;
+        }
+        cpu.p.n = cpu.r.a >> 15;  
+
+        // Check for signed overflow.
+        // If they started with the same sign and then the resulting sign is
+        // different then we have a signed overflow.
+        if((!((old_a ^ argument) & 0x8000)) && ((cpu.r.a ^ old_a) & 0x8000)) {
+          cpu.p.v = 1;
+        } else {
+          cpu.p.v = 0;
+        }
+      }
+    }
 
     if(cpu.r.a===0) {
       cpu.p.z = 1;
