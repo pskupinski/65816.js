@@ -3620,11 +3620,13 @@ var ADC_const = {
         ones = bytes[0] & 0x0f;
         tens = bytes[0] >>4;
         var dec_arg = (tens*10)+ones;
-        var result = dec_a + dec_arg;
+        var result = dec_a + dec_arg + cpu.p.c;
         // Check for decimal overflow.
         if(result>99) {
           result -= 99;
           cpu.p.c = 1; 
+        } else {
+          cpu.p.c = 0;
         }
         var digits = result.toString(10).split("");
         var i = 0;
@@ -3667,11 +3669,13 @@ var ADC_const = {
         hundreds = (argument >> 8) & 0xf;
         thousands = (argument >> 12) & 0xf;
         var dec_arg = (thousands*1000)+(hundreds*100)+(tens*10)+ones;
-        var result = dec_a + dec_arg;
+        var result = dec_a + dec_arg + cpu.p.c;
         // Check for decimal overflow.
         if(result>9999) {
           result -= 9999;
           cpu.p.c = 1; 
+        } else {
+          cpu.p.c = 0;
         }
         var digits = result.toString(10).split("");
         var i = 0;

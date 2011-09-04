@@ -649,6 +649,23 @@ function test_adc() {
                        "be 0 for native mode.");
   });
   test("Test that ADC handles decimal mode with legal BCD numbers in 8-bit "+
+       "memory/accumulator mode with double digit numbers with the carry "+
+       "bit set", function() {
+    var cpu = new CPU_65816();
+    cpu.execute("18fb38f8a9156926");
+    equals(cpu.r.a, 0x42, "0x15 + 0x26 should result in 0x42 with decimal "+
+                          "mode on and with 8-bit memory/accumulator mode "+
+                          "and the carry bit set.");
+    equals(cpu.p.c, 0, "The carry flag of the p status register should be "+
+                       "clear after no decimal overflow.");
+    equals(cpu.p.d, 1, "Decimal mode should be set to 1 in the p status "+
+                       "register.");
+    equals(cpu.p.m, 1, "The m flag of the p status register should be 1 for "+
+                       "8-bit memory/accumulator mode.");
+    equals(cpu.p.e, 0, "The hidden e flag of the p status register should "+
+                       "be 0 for native mode.");
+  });
+  test("Test that ADC handles decimal mode with legal BCD numbers in 8-bit "+
        "memory/accumulator mode when adding two numbers that cause an "+
        "overflow.", function() {
     var cpu = new CPU_65816();
@@ -708,6 +725,23 @@ function test_adc() {
                             "memory/accumulator mode.");
     equals(cpu.p.c, 1, "The carry flag of the p status register should be "+
                        "set after decimal overflow.");
+    equals(cpu.p.d, 1, "Decimal mode should be set to 1 in the p status "+
+                       "register.");
+    equals(cpu.p.m, 0, "The m flag of the p status register should be 0 for "+
+                       "16-bit memory/accumulator mode.");
+    equals(cpu.p.e, 0, "The hidden e flag of the p status register should "+
+                       "be 0 for native mode.");
+  });
+  test("Test that ADC handles decimal mode with legal BCD numbers in 16-bit "+
+       "memory/accumulator mode when adding two four digit numbers with the "+
+       "carry bit set.", function() {
+    var cpu = new CPU_65816();
+    cpu.execute("18fb38f8c220a90110699939");
+    equals(cpu.r.a, 0x5001, "0x1001 + 0x3999 should result in 0x5001 with "+
+                            "decimal mode on and with 16-bit "+
+                            "memory/accumulator mode and the carry flag set.");
+    equals(cpu.p.c, 0, "The carry flag of the p status register should be "+
+                       "clear after no decimal overflow.");
     equals(cpu.p.d, 1, "Decimal mode should be set to 1 in the p status "+
                        "register.");
     equals(cpu.p.m, 0, "The m flag of the p status register should be 0 for "+
