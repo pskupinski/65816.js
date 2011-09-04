@@ -3653,22 +3653,50 @@ var ADC_const = {
       }
     } else {
       var argument = (bytes[1]<<8)|bytes[0];
-      cpu.r.a += argument + cpu.p.c;
-      if(cpu.r.a & 0x10000) {
-        cpu.p.c = 1;
+      if(cpu.p.d) {
+        // Form a decimal number out of a.
+        var ones = cpu.r.a & 0xf;
+        var tens = (cpu.r.a >>4) & 0xf;
+        var hundreds = (cpu.r.a >> 8) & 0xf;
+        var thousands = (cpu.r.a >> 12) & 0xf;
+        var dec_a = (thousands*1000)+(hundreds*100)+(tens*10)+ones;
+      
+        // Form a decimal number out of the argument.
+        ones = argument & 0xf;
+        tens = (argument >> 4) & 0xf;
+        hundreds = (argument >> 8) & 0xf;
+        thousands = (argument >> 12) & 0xf;
+        var dec_arg = (thousands*1000)+(hundreds*100)+(tens*10)+ones;
+        var result = dec_a + dec_arg;
+        // Check for decimal overflow.
+        if(result>9999) {
+          result -= 9999;
+          cpu.p.c = 1; 
+        }
+        var digits = result.toString(10).split("");
+        var i = 0;
+        cpu.r.a = 0;
+        for(i=0;i<digits.length;i++) {
+          cpu.r.a += (digits[i]-0)*Math.pow(16,digits.length-i-1);
+        }
       } else {
-        cpu.p.c = 0; 
-      }
-      cpu.r.a &= 0xffff;
-      cpu.p.n = cpu.r.a >> 15;
+        cpu.r.a += argument + cpu.p.c;
+        if(cpu.r.a & 0x10000) {
+          cpu.p.c = 1;
+        } else {
+          cpu.p.c = 0; 
+        }
+        cpu.r.a &= 0xffff;
+        cpu.p.n = cpu.r.a >> 15;
 
-      // Check for signed overflow.
-      // If they started with the same sign and then the resulting sign is
-      // different then we have a signed overflow.
-      if((!((old_a ^ argument) & 0x8000)) && ((cpu.r.a ^ old_a) & 0x8000)) {
-        cpu.p.v = 1;
-      } else {
-        cpu.p.v = 0;
+        // Check for signed overflow.
+        // If they started with the same sign and then the resulting sign is
+        // different then we have a signed overflow.
+        if((!((old_a ^ argument) & 0x8000)) && ((cpu.r.a ^ old_a) & 0x8000)) {
+          cpu.p.v = 1;
+        } else {
+          cpu.p.v = 0;
+        }
       }
     }
 
