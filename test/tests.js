@@ -15,7 +15,8 @@
  */
 
 function run_tests() {
-  test_lda(); 
+  test_lda();
+  test_stz();
   test_rep();
   test_sep();
   test_branching();
@@ -116,8 +117,8 @@ function test_lda() {
                        "desired address.");
     equals(cpu.p.m, 1, "m flag of the p status register should be 1 for "+
                        "8-bit memory/accumulator mode.");
-     equals(cpu.p.e, 0, "Hidden e flag of the p status register should be 0 "+
-                        "for native mode.");
+    equals(cpu.p.e, 0, "Hidden e flag of the p status register should be 0 "+
+                       "for native mode.");
   });
   test("Make sure LDA with a direct page address indexed with the x "+
        "register loads a 16-bit value in 16-bit memory/accumulator mode.",
@@ -291,6 +292,86 @@ function test_lda() {
                        "16-bit memory/accumulator mode.");
     equals(cpu.p.e, 0, "Hidden e flag of the p status register should be 0 "+
                        "for native mode.");
+  });
+}
+
+function test_stz() {
+  module("STZ");
+  test("Test STZ direct page for 8-bit memory/accumulator mode.", function() {
+    var cpu = new CPU_65816();
+    cpu.execute("18fba9ff85fa64faa5fa");
+    equals(cpu.r.a, 0, "The accumulator should be zero after loading from a "+
+                       "direct page addresss that has had zero stored to it.");
+    equals(cpu.p.e, 0, "The hidden e flag should be zero for native mode.");
+    equals(cpu.p.m, 1, "The m flag should be one for 8-bit "+
+                       "memory/accumulator mode.");
+  });
+  test("Test STZ direct page for 16-bit memory/accumulator mode.", function() {
+    var cpu = new CPU_65816();
+    cpu.execute("18fbc220a9ffff85fa64faa5fa");
+    equals(cpu.r.a, 0, "The accumulator should be zero after loading from a "+
+                       "direct page address that had zero stored to it.");
+    equals(cpu.p.e, 0, "The hidden e flag should be zero for native mode.");
+    equals(cpu.p.m, 0, "The m flag should be zero for 16-bit "+
+                       "memory/accumulator mode.");
+  });
+  test("Test STZ absolute for 8-bit memory/accumulator mode.", function() {
+    var cpu = new CPU_65816();
+    cpu.execute("18fba9ff8d34129c3412ad3412");
+    equals(cpu.r.a, 0, "The accumulator should be zero after loading from an "+
+                       "absolute address that had zero stored to it.");
+    equals(cpu.p.e, 0, "The hidden e flag should be zero for native mode.");
+    equals(cpu.p.m, 1, "The m flag should be one for 8-bit "+
+                       "memory/accumulator mode.");
+  });
+  test("Test STZ absolute for 16-bit memory/accumulator mode.", function() {
+    var cpu = new CPU_65816();
+    cpu.execute("18fbc220a9ffff8d34129c3412ad3412");
+    equals(cpu.r.a, 0, "The accumulator should be zero after loading from an "+
+                       "absolute page address that had zero stored to it.");
+    equals(cpu.p.e, 0, "The hidden e flag should be zero for native mode.");
+    equals(cpu.p.m, 0, "The m flag should be zero for 16-bit "+
+                       "memory/accumulator mode.");
+  });
+  test("Test STZ direct page indexed by the x register for 8-bit "+
+       "memory/accumulator mode.", function() {
+    var cpu = new CPU_65816();
+    cpu.execute("18fba9ff85fb85faa20174faa5fb");
+    equals(cpu.r.a, 0, "The accumulator should be zero after loading from a "+
+                       "direct page addresss that has had zero stored to it.");
+    equals(cpu.p.e, 0, "The hidden e flag should be zero for native mode.");
+    equals(cpu.p.m, 1, "The m flag should be one for 8-bit "+
+                       "memory/accumulator mode.");
+  });
+  test("Test STZ direct page indexed by the x register for 16-bit "+
+       "memory/accumulator mode.", function() {
+    var cpu = new CPU_65816();
+    cpu.execute("18fbc220a9ffff85faa20274f8a5fa");
+    equals(cpu.r.a, 0, "The accumulator should be zero after loading from a "+
+                       "direct page address that had zero stored to it.");
+    equals(cpu.p.e, 0, "The hidden e flag should be zero for native mode.");
+    equals(cpu.p.m, 0, "The m flag should be zero for 16-bit "+
+                       "memory/accumulator mode.");
+  });
+  test("Test STZ absolute indexed by the x register for 8-bit "+
+       "memory/accumulator mode.", function() {
+    var cpu = new CPU_65816();
+    cpu.execute("18fba9ff8dbbaa8dbaaaa2019ebaaaadbbaa");
+    equals(cpu.r.a, 0, "The accumulator should be zero after loading from an "+
+                       "absolute address that had zero stored to it.");
+    equals(cpu.p.e, 0, "The hidden e flag should be zero for native mode.");
+    equals(cpu.p.m, 1, "The m flag should be one for 8-bit "+
+                       "memory/accumulator mode.");
+  });
+  test("Test STZ absolute indexed by the x register for 16-bit "+
+       "memory/accumulator mode.", function() {
+    var cpu = new CPU_65816();
+    cpu.execute("18fbc220a9ffff8dbbaaa2029eb9aaadbbaa");
+    equals(cpu.r.a, 0, "The accumulator should be zero after loading from an "+
+                       "absolute page address that had zero stored to it.");
+    equals(cpu.p.e, 0, "The hidden e flag should be zero for native mode.");
+    equals(cpu.p.m, 0, "The m flag should be zero for 16-bit "+
+                       "memory/accumulator mode.");
   });
 }
 
