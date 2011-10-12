@@ -4133,8 +4133,11 @@ var BMI = {
        // Handle single byte two's complement numbers as the branch argument.
       if(bytes[0]<=127) {
         cpu.r.pc+=bytes[0];
+        cpu.r.pc&=0xffff;
       } else {
         cpu.r.pc-=256-bytes[0];
+        if(cpu.r.pc<0)
+          cpu.r.pc+=0xffff;
       }
     }
   }
@@ -4149,8 +4152,11 @@ var BPL = {
        // Handle single byte two's complement numbers as the branch argument.
       if(bytes[0]<=127) {
         cpu.r.pc+=bytes[0];
+        cpu.r.pc&=0xffff;
       } else {
         cpu.r.pc-=256-bytes[0];
+        if(cpu.r.pc<0)
+          cpu.r.pc+=0xffff;
       }
     }
   }
@@ -4165,8 +4171,11 @@ var BVC = {
        // Handle single byte two's complement numbers as the branch argument.
       if(bytes[0]<=127) {
         cpu.r.pc+=bytes[0];
+        cpu.r.pc&=0xffff;
       } else {
         cpu.r.pc-=256-bytes[0];
+        if(cpu.r.pc<0)
+          cpu.r.pc+=0xffff;
       }
     }
   }
@@ -4182,8 +4191,11 @@ var BVS = {
        // Handle single byte two's complement numbers as the branch argument.
       if(bytes[0]<=127) {
         cpu.r.pc+=bytes[0];
+        cpu.r.pc&=0xffff;
       } else {
         cpu.r.pc-=256-bytes[0];
+        if(cpu.r.pc<0)
+          cpu.r.pc+=0xffff;
       }
     }
   }
@@ -4198,8 +4210,11 @@ var BCC = {
        // Handle single byte two's complement numbers as the branch argument.
       if(bytes[0]<=127) {
         cpu.r.pc+=bytes[0];
+        cpu.r.pc&=0xffff;
       } else {
         cpu.r.pc-=256-bytes[0];
+        if(cpu.r.pc<0)
+          cpu.r.pc+=0xffff;
       }
     }
   }
@@ -4214,8 +4229,11 @@ var BCS = {
        // Handle single byte two's complement numbers as the branch argument.
       if(bytes[0]<=127) {
         cpu.r.pc+=bytes[0];
+        cpu.r.pc&=0xffff;
       } else {
         cpu.r.pc-=256-bytes[0];
+        if(cpu.r.pc<0)
+          cpu.r.pc+=0xffff;
       }
     }
   }
@@ -4230,8 +4248,11 @@ var BEQ = {
        // Handle single byte two's complement numbers as the branch argument.
       if(bytes[0]<=127) {
         cpu.r.pc+=bytes[0];
+        cpu.r.pc&=0xffff;
       } else {
         cpu.r.pc-=256-bytes[0];
+        if(cpu.r.pc<0)
+          cpu.r.pc+=0xffff;
       }
     }
   }
@@ -4246,8 +4267,11 @@ var BNE = {
        // Handle single byte two's complement numbers as the branch argument.
       if(bytes[0]<=127) {
         cpu.r.pc+=bytes[0];
+        cpu.r.pc&=0xffff;
       } else {
         cpu.r.pc-=256-bytes[0];
+        if(cpu.r.pc<0)
+          cpu.r.pc+=0xffff;
       }
     }
   }
@@ -4262,8 +4286,11 @@ var BRA = {
     // Handle single byte two's complement numbers as the branch argument.
     if(bytes[0]<=127) {
       cpu.r.pc+=bytes[0];
+      cpu.r.pc&=0xffff;
     } else {
       cpu.r.pc-=256-bytes[0];
+      if(cpu.r.pc<0)
+        cpu.r.pc+=0xffff;
     }
   }
 };
@@ -4277,8 +4304,11 @@ var BRL = {
     var num = (bytes[1]<<8)|bytes[0];
     if(num<=32767) {
       cpu.r.pc+=num;
+      cpu.r.pc&=0xffff;
     } else {
       cpu.r.pc-=65536-num;
+      if(cpu.r.pc<0)
+        cpu.r.pc+=0xffff;
     }
   }
 };
