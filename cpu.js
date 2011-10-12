@@ -408,7 +408,6 @@ function MMU() {
 
   this.reset = function() {
     this.memory ={ 0: {} };
-    this.memory_mapped_io_devices = {};
   };
 
   this.add_memory_mapped_io_device = function(write_callback, read_callback,
