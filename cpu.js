@@ -75,6 +75,8 @@ function CPU_65816() {
     }
   };
 
+  this.cycle_count = 0;
+
   this.mmu = new MMU();
   this.mmu.cpu = this; 
 
@@ -397,7 +399,8 @@ function CPU_65816() {
     this.interrupt = this.INTERRUPT.NO_INTERRUPT;
     this.r = { a:0, b:0, x:0, y:0, d:0, s:0xff, pc:0, dbr:0, k:0 };
     this.p = { e:1, c:0, z:0, i:0, d:0, x:0, m:0, v:0, n:0 };
-    this.mmu.reset();  
+    this.mmu.reset();
+    this.cycle_count = 0;
   }; 
 }
 
@@ -535,6 +538,7 @@ var TXS = {
     return 1;
   },
   execute:function(cpu) {
+    cpu.cycle_count+=2;
     cpu.r.s = cpu.r.x; 
     if(cpu.p.e|cpu.p.x) {
       cpu.p.n = cpu.r.s >> 7;
@@ -554,6 +558,7 @@ var TSX = {
     return 1;
   },
   execute:function(cpu) {
+    cpu.cycle_count+=2;
     if(cpu.p.e|cpu.p.x) {
       cpu.r.x = cpu.r.s & 0xff;
       cpu.p.n = cpu.r.x >> 7;
@@ -832,6 +837,11 @@ var RTI = {
     return 1;
   },
   execute:function(cpu) {
+    if(cpu.p.e)
+      cpu.cycle_count+=6;
+    else
+      cpu.cycle_count+=7;
+
     var p_byte = cpu.mmu.pull_byte();
     var pc_low = cpu.mmu.pull_byte();
     var pc_high = cpu.mmu.pull_byte();
@@ -3709,6 +3719,8 @@ var ADC_const = {
   execute:function(cpu, bytes) {
     var old_a = cpu.r.a; 
     if(cpu.p.e|cpu.p.m) {
+      cpu.cycle_count+=2;
+
       if(cpu.p.d) {
         // Form a decimal number out of a.
         var ones = cpu.r.a & 0x0f;        
@@ -3753,6 +3765,7 @@ var ADC_const = {
         }
       }
     } else {
+      cpu.cycle_count+=3;
       var argument = (bytes[1]<<8)|bytes[0];
       if(cpu.p.d) {
         // Form a decimal number out of a.
@@ -3817,6 +3830,7 @@ var ADC_absolute = {
   },
   execute:function(cpu, bytes) {
     var location = (bytes[1]<<8)|bytes[0];
+    cpu.cycle_count+=2;
     if(cpu.p.e|cpu.p.m) {
       ADC_const.execute(cpu, [cpu.mmu.read_byte(location)]);
     } else {
@@ -3833,6 +3847,7 @@ var ADC_absolute_long = {
   },
   execute:function(cpu, bytes) {
     var location = (bytes[1]<<8)|bytes[0];
+    cpu.cycle_count+=3;
     if(cpu.p.e|cpu.p.m) {
       ADC_const.execute(cpu, [cpu.mmu.read_byte_long(location, bytes[2])]);
     } else {
@@ -3848,6 +3863,8 @@ var ADC_absolute_long_indexed_x = {
     return 4;
   },
   execute:function(cpu, bytes) {
+    cpu.cycle_count+=3;
+
     var location = ((bytes[1]<<8)|bytes[0]) + cpu.r.x;
     if(location & 0x10000) {
       bytes[2]++;
@@ -3874,6 +3891,11 @@ var ADC_direct_page = {
     return 2;
   },
   execute:function(cpu, bytes) {
+    if((cpu.r.d&0x00ff)!=0)
+      cpu.cycle_count+=2;
+    else 
+      cpu.cycle_count++;
+
     var location = bytes[0] + cpu.r.d;
     if(cpu.p.e|cpu.p.m) {
       ADC_const.execute(cpu, [cpu.mmu.read_byte(location)]);
@@ -3890,6 +3912,11 @@ var ADC_direct_page_indirect = {
     return 2;
   },
   execute:function(cpu, bytes) {
+    if((cpu.r.d&0x00ff)!=0)
+      cpu.cycle_count+=4;
+    else 
+      cpu.cycle_count+=3;
+
     var location = bytes[0] + cpu.r.d;
     var low_byte_loc = cpu.mmu.read_byte(location);
     var high_byte_loc = cpu.mmu.read_byte(location+1);
@@ -3909,6 +3936,11 @@ var ADC_direct_page_indexed_x_indirect = {
     return 2;
   },
   execute:function(cpu, bytes) {
+    if((cpu.r.d&0x00ff)!=0)
+      cpu.cycle_count+=5;
+    else 
+      cpu.cycle_count+=4;
+
     if(cpu.p.e) {
       var location = (bytes[0] + cpu.r.x) & 0xff;
       var low_byte_loc = cpu.mmu.read_byte_long((location+cpu.r.d)&0xffff, 0);
@@ -3946,11 +3978,17 @@ var ADC_direct_page_indirect_long_indexed_y = {
     return 2;
   },
   execute:function(cpu, bytes) {
+    if((cpu.r.d&0x00ff)!=0)
+      cpu.cycle_count+=5;
+    else 
+      cpu.cycle_count+=4;
+
     var location = bytes[0] + cpu.r.d;
     var low_byte_loc = cpu.mmu.read_byte(location&0xffff);
     var high_byte_loc = cpu.mmu.read_byte((location+1)&0xffff);
     var bank_byte = cpu.mmu.read_byte((location+2)&0xffff);
     var absolute_location = ((high_byte_loc<<8) | low_byte_loc) + cpu.r.y;
+
     if(absolute_location >> 16) {
       absolute_location &= 0xffff;
       bank_byte++;
@@ -3976,6 +4014,11 @@ var ADC_direct_page_indirect_long = {
     return 2;
   },
   execute:function(cpu, bytes) {
+    if((cpu.r.d&0x00ff)!=0)
+      cpu.cycle_count+=5;
+    else 
+      cpu.cycle_count+=4;
+
     var location = bytes[0] + cpu.r.d;
     var low_byte_loc = cpu.mmu.read_byte(location&0xffff);
     var high_byte_loc = cpu.mmu.read_byte((location+1)&0xffff);
@@ -3998,10 +4041,21 @@ var ADC_direct_page_indirect_indexed_y = {
     return 2;
   },
   execute:function(cpu, bytes) {
+    if((cpu.r.d&0x00ff)!=0)
+      cpu.cycle_count+=4;
+    else 
+      cpu.cycle_count+=3;
+
     var location = bytes[0] + cpu.r.d;
     var low_byte_loc = cpu.mmu.read_byte(location);
     var high_byte_loc = cpu.mmu.read_byte(location+1);
-    var absolute_location = ((high_byte_loc<<8) | low_byte_loc) + cpu.r.y;
+    var initial_absolute_location = ((high_byte_loc<<8) | low_byte_loc);
+    var absolute_location = initial_absolute_location + cpu.r.y;
+
+    // Add 1 cycle if page boundary crossed
+    if((initial_absolute_location&0xff00)!=(absolute_location&0xff00))
+      cpu.cycle_count++;
+
     if(cpu.p.e|cpu.p.m) {
       ADC_const.execute(cpu, [cpu.mmu.read_byte(absolute_location)]);
     } else {
@@ -4017,7 +4071,15 @@ var ADC_absolute_indexed_x = {
     return 3;
   },
   execute:function(cpu, bytes) {
-    var location = ((bytes[1]<<8)|bytes[0])+cpu.r.x;
+    var initial_location = (bytes[1]<<8)|bytes[0];
+    var location = initial_location+cpu.r.x;
+
+    // Add 1 cycle if page boundary crossed
+    if((location&0xff00)!=(initial_location&0xff00))
+      cpu.cycle_count+=3;
+    else
+      cpu.cycle_count+=2;
+
     var location_high_byte = location >> 8;
     var location_low_byte = location & 0x00ff;
     ADC_absolute.execute(cpu, [location_low_byte, location_high_byte]);  
@@ -4029,7 +4091,15 @@ var ADC_absolute_indexed_y = {
     return 3;
   },
   execute:function(cpu, bytes) {
-    var location = ((bytes[1]<<8)|bytes[0])+cpu.r.y;
+    var initial_location = (bytes[1]<<8)|bytes[0];
+    var location = initial_location+cpu.r.y;
+
+    // Add 1 cycle if page boundary crossed
+    if((location&0xff00)!=(initial_location&0xff00))
+      cpu.cycle_count+=3;
+    else
+      cpu.cycle_count+=2;
+
     var location_high_byte = location >> 8;
     var location_low_byte = location & 0x00ff;
     ADC_absolute.execute(cpu, [location_low_byte, location_high_byte]);  
@@ -4041,6 +4111,7 @@ var ADC_direct_page_indexed_x = {
     return 2;
   },
   execute:function(cpu, bytes) {
+    cpu.cycle_count++;
     ADC_direct_page.execute(cpu, [bytes[0]+cpu.r.x]);  
   }
 };
@@ -4050,6 +4121,8 @@ var ADC_stack_relative = {
     return 2;
   },
   execute:function(cpu, bytes) {
+    cpu.cycle_count+=2;
+
     if(cpu.p.e) {
       var location = 0x100 | ((cpu.r.s + bytes[0]) & 0xff);
       ADC_const.execute(cpu, [cpu.mmu.read_byte(location)]);
@@ -4071,6 +4144,8 @@ var ADC_stack_relative_indirect_indexed_y = {
     return 2;
   },
   execute:function(cpu, bytes) {
+    cpu.cycle_count+=5;
+
     if(cpu.p.e) {
       var location_loc = 0x100 | ((cpu.r.s + bytes[0]) & 0xff);
       var low_byte =  cpu.mmu.read_byte(location_loc);
@@ -4390,6 +4465,7 @@ var TYA = {
     return 1;
   },
   execute:function(cpu) {
+    cpu.cycle_count+=2;
     if(cpu.p.e|cpu.p.m) {
       if(cpu.p.e|cpu.p.x) {
         // 8-bit index register to 8-bit accumulator.
@@ -4418,6 +4494,7 @@ var TAY = {
     return 1;
   },
   execute:function(cpu) {
+    cpu.cycle_count+=2;
     if(cpu.p.e|cpu.p.m) {
       if(cpu.p.e|cpu.p.x) {
         // 8-bit accumulator to 8-bit x index register.
@@ -4454,6 +4531,7 @@ var TXA = {
     return 1;
   },
   execute:function(cpu) {
+    cpu.cycle_count+=2;
     if(cpu.p.e|cpu.p.m) {
       if(cpu.p.e|cpu.p.x) {
         // 8-bit index register to 8-bit accumulator.
@@ -4482,6 +4560,7 @@ var TAX = {
     return 1;
   },
   execute:function(cpu) {
+    cpu.cycle_count+=2;
     if(cpu.p.e|cpu.p.m) {
       if(cpu.p.e|cpu.p.x) {
         // 8-bit accumulator to 8-bit x index register.
@@ -4517,6 +4596,7 @@ var TXY = {
     return 1;
   },
   execute:function(cpu) {
+    cpu.cycle_count+=2;
     cpu.r.y = cpu.r.x;
     if(cpu.r.y===0) {
       cpu.p.z = 1;
@@ -4537,6 +4617,7 @@ var TYX = {
     return 1;
   },
   execute:function(cpu) {
+    cpu.cycle_count+=2;
     cpu.r.x = cpu.r.y;
     if(cpu.r.x===0) {
       cpu.p.z = 1;
@@ -6416,6 +6497,7 @@ var REP = {
 var XCE = {
   bytes_required: function() { return 1; },
   execute: function(cpu) {
+    cpu.cycle_count+=2;
     var temp = cpu.p.c; 
     cpu.p.c = cpu.p.e;
     cpu.p.e = temp;        
@@ -6439,6 +6521,7 @@ var XCE = {
 var CLC = {
   bytes_required: function() { return 1; },
   execute: function(cpu) {
+    cpu.cycle_count+=2;
     cpu.p.c = 0;
   }  
 };
@@ -6446,6 +6529,7 @@ var CLC = {
 var SEI = {
   bytes_required: function() { return 1; },
   execute: function(cpu) {
+    cpu.cycle_count+=2;
     cpu.p.i = 1;
   }
 };
@@ -6453,6 +6537,7 @@ var SEI = {
 var CLI = {
   bytes_required: function() { return 1; },
   execute: function(cpu) {
+    cpu.cycle_count+=2;
     cpu.p.i = 0;
   }
 };
@@ -6460,6 +6545,7 @@ var CLI = {
 var SEC = {
   bytes_required: function() { return 1; },
   execute: function(cpu) {
+    cpu.cycle_count+=2;
     cpu.p.c = 1;
   }
 };
@@ -6469,6 +6555,7 @@ var CLD = {
     return 1;
   },
   execute:function(cpu) {
+    cpu.cycle_count+=2;
     cpu.p.d = 0;
   }
 };
@@ -6478,6 +6565,7 @@ var SED = {
     return 1;
   },
   execute:function(cpu) {
+    cpu.cycle_count+=2;
     cpu.p.d = 1;
   }
 };
@@ -6487,6 +6575,7 @@ var CLV = {
     return 1;
   },
   execute:function(cpu) {
+    cpu.cycle_count+=2;
     cpu.p.v = 0;
   }
 };
@@ -6497,6 +6586,7 @@ var XBA = {
   },
   execute:function(cpu) {
     if(cpu.p.e|cpu.p.m) {
+      cpu.cycle_count+=2;
       var old_a = cpu.r.a;
       cpu.r.a = cpu.r.b;
       cpu.r.b = old_a;
