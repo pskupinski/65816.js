@@ -513,6 +513,8 @@ var STP = {
     return 1;
   },
   execute:function(cpu) {
+    cpu.cycle_count+=3;
+
     cpu.stopped = true;
   }
 };
@@ -522,6 +524,8 @@ var WAI = {
     return 1; 
   },
   execute:function(cpu) {
+    cpu.cycle_count+=3;
+
     cpu.waiting = true;
   }
 };
@@ -579,6 +583,8 @@ var TRB_absolute = {
     return 3;
   },
   execute:function(cpu, bytes) {
+    cpu.cycle_count+=6;
+
     var location = (bytes[1]<<8)|bytes[0];
     if(cpu.p.e|cpu.p.m) {
       var data = cpu.mmu.read_byte(location);
@@ -589,6 +595,8 @@ var TRB_absolute = {
       }
       cpu.mmu.store_byte(location, (~cpu.r.a & data));
     } else {
+      cpu.cycle_count+=2;     
+
       var low_byte = cpu.mmu.read_byte(location);
       var high_byte = cpu.mmu.read_byte((location+1)&0xffff);
       var data = (high_byte<<8) | low_byte;
@@ -611,6 +619,11 @@ var TRB_direct_page = {
     return 2;
   },
   execute:function(cpu, bytes) {
+    cpu.cycle_count+=5;
+
+    if((cpu.r.d&0xff)!=0)
+      cpu.cycle_count++;
+
     var location = bytes[0] + cpu.r.d;
     if(cpu.p.e|cpu.p.m) {
       var data = cpu.mmu.read_byte(location&0xffff);
@@ -621,6 +634,8 @@ var TRB_direct_page = {
       }
       cpu.mmu.store_byte(location&0xffff, (~cpu.r.a & data));
     } else {
+      cpu.cycle_count+=2;  
+
       var low_byte = cpu.mmu.read_byte(location&0xffff);
       var high_byte = cpu.mmu.read_byte((location+1)&0xffff);
       var data = (high_byte<<8) | low_byte;
@@ -644,6 +659,8 @@ var TSB_absolute = {
     return 3;
   },
   execute:function(cpu, bytes) {
+    cpu.cycle_count+=6;
+
     var location = (bytes[1]<<8)|bytes[0];
     if(cpu.p.e|cpu.p.m) {
       var data = cpu.mmu.read_byte(location);
@@ -654,6 +671,8 @@ var TSB_absolute = {
       }
       cpu.mmu.store_byte(location, (cpu.r.a | data));
     } else {
+      cpu.cycle_count+=2;
+
       var low_byte = cpu.mmu.read_byte(location);
       var high_byte = cpu.mmu.read_byte((location+1)&0xffff);
       var data = (high_byte<<8) | low_byte;
@@ -676,6 +695,11 @@ var TSB_direct_page = {
     return 2;
   },
   execute:function(cpu, bytes) {
+    cpu.cycle_count+=5;
+
+    if((cpu.r.d&0xff)!=0)
+      cpu.cycle_count++;
+
     var location = bytes[0] + cpu.r.d;
     if(cpu.p.e|cpu.p.m) {
       var data = cpu.mmu.read_byte(location&0xffff);
@@ -686,6 +710,8 @@ var TSB_direct_page = {
       }
       cpu.mmu.store_byte(location&0xffff, (cpu.r.a | data));
     } else {
+      cpu.cycle_count+=2;      
+
       var low_byte = cpu.mmu.read_byte(location&0xffff);
       var high_byte = cpu.mmu.read_byte((location+1)&0xffff);
       var data = (high_byte<<8) | low_byte;
@@ -817,6 +843,11 @@ var COP = {
     return 2;
   },
   execute:function(cpu) {
+    cpu.cycle_count+=7;
+
+    if(cpu.p.e===0)
+      cpu.cycle_count++;
+
     cpu.interrupt = cpu.INTERRUPT.COP;
   }
 };
@@ -826,6 +857,11 @@ var BRK = {
     return 2;
   },
   execute:function(cpu) {
+    cpu.cycle_count+=7;
+
+    if(cpu.p.e===0)
+      cpu.cycle_count++;
+
     cpu.interrupt = cpu.INTERRUPT.BRK;
     if(cpu.p.e) 
       cpu.p.m = 1;
@@ -837,10 +873,10 @@ var RTI = {
     return 1;
   },
   execute:function(cpu) {
-    if(cpu.p.e)
-      cpu.cycle_count+=6;
-    else
-      cpu.cycle_count+=7;
+    cpu.cycle_count+=6;
+
+    if(cpu.p.e===0)
+      cpu.cycle_count++;
 
     var p_byte = cpu.mmu.pull_byte();
     var pc_low = cpu.mmu.pull_byte();
@@ -951,6 +987,8 @@ var JSL = {
     return 4;
   },
   execute:function(cpu, bytes) {
+    cpu.cycle_count+=8;
+
     var location = cpu.r.pc - 1;
     var low_byte = location & 0x00ff;
     var high_byte = location >> 8;
@@ -967,6 +1005,8 @@ var RTL = {
     return 1;
   },
   execute:function(cpu) {
+    cpu.cycle_count+=6;
+
     var low_byte = cpu.mmu.pull_byte();
     var high_byte = cpu.mmu.pull_byte();
     cpu.r.k = cpu.mmu.pull_byte();
@@ -979,6 +1019,8 @@ var JSR = {
     return 3;
   },
   execute:function(cpu, bytes) {
+    cpu.cycle_count+=6;
+
     var location = cpu.r.pc - 1;
     var low_byte = location & 0x00ff;
     var high_byte = location >> 8;
@@ -993,6 +1035,8 @@ var JSR_absolute_indexed_x_indirect = {
     return 3;
   },
   execute:function(cpu, bytes) {
+    cpu.cycle_count+=8; 
+
     var location = ((bytes[1]<<8)|bytes[0])+cpu.r.x;
     var bank = cpu.r.k;
     if(location&0x10000) {
@@ -1021,6 +1065,8 @@ var RTS = {
     return 1;
   },
   execute:function(cpu) {
+    cpu.cycle_count+=6;
+
     var low_byte = cpu.mmu.pull_byte();
     var high_byte = cpu.mmu.pull_byte();
     cpu.r.pc = ((high_byte<<8)|low_byte) + 1;  
@@ -1032,6 +1078,8 @@ var PER = {
     return 3;
   },
   execute:function(cpu,bytes) {
+    cpu.cycle_count+=6;
+
     var address = ((bytes[1]<<8)|bytes[0]) + cpu.r.pc;
     var low_byte = address & 0x00ff;
     var high_byte = address >> 8;
@@ -1045,6 +1093,8 @@ var PHK = {
     return 1;
   },
   execute:function(cpu) {
+    cpu.cycle_count+=3;
+
     cpu.mmu.push_byte(cpu.r.k);
   }
 };
@@ -1054,6 +1104,8 @@ var PHD = {
     return 1;
   },
   execute:function(cpu) {
+    cpu.cycle_count+=4;
+
     var low_byte = cpu.r.d & 0x00ff;
     var high_byte = cpu.r.d >> 8;
     cpu.mmu.push_byte(high_byte);
@@ -1066,6 +1118,8 @@ var PLD = {
     return 1;
   },
   execute:function(cpu) {
+    cpu.cycle_count+=5;
+
     var low_byte = cpu.mmu.pull_byte();
     var high_byte = cpu.mmu.pull_byte();
     cpu.r.d = (high_byte<<8)|low_byte;
@@ -1085,6 +1139,7 @@ var PHB = {
     return 1;
   },
   execute:function(cpu) {
+    cpu.cycle_count+=3;
     cpu.mmu.push_byte(cpu.r.dbr);
   }
 };
@@ -1094,6 +1149,8 @@ var PLB = {
     return 1;
   },
   execute:function(cpu) {
+    cpu.cycle_count+=4;
+
     cpu.r.dbr = cpu.mmu.pull_byte();
     cpu.p.n = cpu.r.dbr >> 7;
     if(cpu.r.dbr===0) {
@@ -1109,6 +1166,8 @@ var PEA = {
     return 3;
   },
   execute:function(cpu, bytes) {
+    cpu.cycle_count+=5;
+
     cpu.mmu.push_byte(bytes[1]);
     cpu.mmu.push_byte(bytes[0]);
   }
@@ -1119,6 +1178,11 @@ var PEI = {
     return 2;
   },
   execute:function(cpu, bytes) {
+    cpu.cycle_count+=6;
+
+    if((cpu.r.d&0xff)!=0)
+      cpu.cycle_count++; 
+
     var location = bytes[0]+cpu.r.d;
     var low_byte = cpu.mmu.read_byte(location);
     var high_byte = cpu.mmu.read_byte(location+1);
@@ -1132,6 +1196,8 @@ var PHP = {
     return 1;
   },
   execute:function(cpu) {
+    cpu.cycle_count+=3;
+
     var p_byte = (cpu.p.n<<7)|(cpu.p.v<<6)|(cpu.p.m<<5)|(cpu.p.x<<4)|
                  (cpu.p.d<<3)|(cpu.p.i<<2)|(cpu.p.z<<1)|cpu.p.c;
     cpu.mmu.push_byte(p_byte);
@@ -1143,6 +1209,8 @@ var PLP = {
     return 1;
   },
   execute:function(cpu) {
+    cpu.cycle_count+=4;
+
     var p_byte = cpu.mmu.pull_byte();
     cpu.p.c = p_byte & 0x01;
     cpu.p.z = (p_byte & 0x02) >> 1;
@@ -1160,9 +1228,13 @@ var PHX = {
     return 1;
   },
   execute:function(cpu) {
+    cpu.cycle_count+=3;
+
     if(cpu.p.e|cpu.p.x) {
       cpu.mmu.push_byte(cpu.r.x);
     } else {
+      cpu.cycle_count++;
+
       var low_byte = cpu.r.x & 0x00ff;
       var high_byte = cpu.r.x >> 8;
       cpu.mmu.push_byte(high_byte);
@@ -1176,10 +1248,13 @@ var PLX = {
     return 1;
   },
   execute:function(cpu) {
+    cpu.cycle_count+=4;
+
     if(cpu.p.e|cpu.p.x) {
       cpu.r.x = cpu.mmu.pull_byte();
       cpu.p.n = cpu.r.x >> 7;
     } else {
+      cpu.cycle_count++;  
       var low_byte = cpu.mmu.pull_byte();
       var high_byte = cpu.mmu.pull_byte();
       cpu.r.x = (high_byte<<8)|low_byte;
@@ -1199,9 +1274,12 @@ var PHY = {
     return 1;
   },
   execute:function(cpu) {
+    cpu.cycle_count+=3;
+
     if(cpu.p.e|cpu.p.x) {
       cpu.mmu.push_byte(cpu.r.y);
     } else {
+      cpu.cycle_count++;
       var low_byte = cpu.r.y & 0x00ff;
       var high_byte = cpu.r.y >> 8;
       cpu.mmu.push_byte(high_byte);
@@ -1215,10 +1293,13 @@ var PLY = {
     return 1;
   },
   execute:function(cpu) {
+    cpu.cycle_count+=4;
+
     if(cpu.p.e|cpu.p.x) {
       cpu.r.y = cpu.mmu.pull_byte();
       cpu.p.n = cpu.r.y >> 7;
     } else {
+      cpu.cycle_count++;
       var low_byte = cpu.mmu.pull_byte();
       var high_byte = cpu.mmu.pull_byte();
       cpu.r.y = (high_byte<<8)|low_byte;
@@ -1238,9 +1319,13 @@ var PHA = {
     return 1;
   },
   execute:function(cpu) {
+    cpu.cycle_count+=3;
+
     if(cpu.p.e|cpu.p.m) {
       cpu.mmu.push_byte(cpu.r.a);
     } else {
+      cpu.cycle_count++;
+
       var low_byte = cpu.r.a & 0x00ff;
       var high_byte = cpu.r.a >> 8;
       cpu.mmu.push_byte(high_byte);
@@ -1254,10 +1339,14 @@ var PLA = {
     return 1;
   },
   execute:function(cpu) {
+    cpu.cycle_count+=4;
+
     if(cpu.p.e|cpu.p.m) {
       cpu.r.a = cpu.mmu.pull_byte();
       cpu.p.n = cpu.r.a >> 7;
     } else {
+      cpu.cycle_count++;
+ 
       var low_byte = cpu.mmu.pull_byte();
       var high_byte = cpu.mmu.pull_byte();
       cpu.r.a = (high_byte<<8)|low_byte;
@@ -4203,8 +4292,15 @@ var BMI = {
     return 2;
   },
   execute:function(cpu, bytes) {
+    cpu.cycle_count+=2;
+
+    if(cpu.p.e)
+      cpu.cycle_count++;
+
     if(cpu.p.n) {
-       // Handle single byte two's complement numbers as the branch argument.
+      cpu.cycle_count++;
+
+      // Handle single byte two's complement numbers as the branch argument.
       if(bytes[0]<=127) {
         cpu.r.pc+=bytes[0];
         cpu.r.pc&=0xffff;
@@ -4222,8 +4318,15 @@ var BPL = {
     return 2;
   },
   execute:function(cpu, bytes) {
+    cpu.cycle_count+=2;
+
+    if(cpu.p.e)
+      cpu.cycle_count++;
+
     if(!cpu.p.n) {
-       // Handle single byte two's complement numbers as the branch argument.
+      cpu.cycle_count++;
+
+      // Handle single byte two's complement numbers as the branch argument.
       if(bytes[0]<=127) {
         cpu.r.pc+=bytes[0];
         cpu.r.pc&=0xffff;
@@ -4241,8 +4344,15 @@ var BVC = {
     return 2;
   },
   execute:function(cpu, bytes) {
+    cpu.cycle_count+=2;
+
+    if(cpu.p.e)
+      cpu.cycle_count++;
+
     if(!cpu.p.v) {
-       // Handle single byte two's complement numbers as the branch argument.
+      cpu.cycle_count++;
+
+      // Handle single byte two's complement numbers as the branch argument.
       if(bytes[0]<=127) {
         cpu.r.pc+=bytes[0];
         cpu.r.pc&=0xffff;
@@ -4261,8 +4371,15 @@ var BVS = {
     return 2;
   },
   execute:function(cpu, bytes) {
+    cpu.cycle_count+=2;
+
+    if(cpu.p.e)
+      cpu.cycle_count++;
+
     if(cpu.p.v) {
-       // Handle single byte two's complement numbers as the branch argument.
+      cpu.cycle_count++;      
+  
+      // Handle single byte two's complement numbers as the branch argument.
       if(bytes[0]<=127) {
         cpu.r.pc+=bytes[0];
         cpu.r.pc&=0xffff;
@@ -4280,8 +4397,15 @@ var BCC = {
     return 2;
   },
   execute:function(cpu, bytes) {
+    cpu.cycle_count+=2;
+
+    if(cpu.p.e)
+      cpu.cycle_count++;
+
     if(!cpu.p.c) {
-       // Handle single byte two's complement numbers as the branch argument.
+      cpu.cycle_count++;
+ 
+      // Handle single byte two's complement numbers as the branch argument.
       if(bytes[0]<=127) {
         cpu.r.pc+=bytes[0];
         cpu.r.pc&=0xffff;
@@ -4299,8 +4423,15 @@ var BCS = {
     return 2;
   },
   execute:function(cpu, bytes) {
+    cpu.cycle_count+=2;
+
+    if(cpu.p.e)
+      cpu.cycle_count++;
+
     if(cpu.p.c) {
-       // Handle single byte two's complement numbers as the branch argument.
+      cpu.cycle_count++;       
+
+      // Handle single byte two's complement numbers as the branch argument.
       if(bytes[0]<=127) {
         cpu.r.pc+=bytes[0];
         cpu.r.pc&=0xffff;
@@ -4318,8 +4449,15 @@ var BEQ = {
     return 2;
   },
   execute:function(cpu, bytes) {
+    cpu.cycle_count+=2;
+ 
+    if(cpu.p.e)
+      cpu.cycle_count++;    
+
     if(cpu.p.z) {
-       // Handle single byte two's complement numbers as the branch argument.
+      cpu.cycle_count++;
+ 
+      // Handle single byte two's complement numbers as the branch argument.
       if(bytes[0]<=127) {
         cpu.r.pc+=bytes[0];
         cpu.r.pc&=0xffff;
@@ -4337,8 +4475,15 @@ var BNE = {
     return 2;
   },
   execute:function(cpu, bytes) {
+    cpu.cycle_count+=2;  
+
+    if(cpu.p.e)
+      cpu.cycle_count++;
+
     if(!cpu.p.z) {
-       // Handle single byte two's complement numbers as the branch argument.
+      cpu.cycle_count++; 
+
+      // Handle single byte two's complement numbers as the branch argument.
       if(bytes[0]<=127) {
         cpu.r.pc+=bytes[0];
         cpu.r.pc&=0xffff;
@@ -4357,6 +4502,10 @@ var BRA = {
     return 2;
   },
   execute:function(cpu, bytes) {
+    cpu.cycle_count+=3;
+    if(cpu.p.e)
+      cpu.cycle_count++;
+
     // Handle single byte two's complement numbers as the branch argument.
     if(bytes[0]<=127) {
       cpu.r.pc+=bytes[0];
@@ -4374,6 +4523,8 @@ var BRL = {
     return 3;
   },
   execute:function(cpu, bytes) {
+    cpu.cycle_count+=4;
+
     // Handle double byte two's complement numbers as the branch argument.
     var num = (bytes[1]<<8)|bytes[0];
     if(num<=32767) {
@@ -4393,6 +4544,8 @@ var JMP_absolute_indirect = {
     return 3;
   }, 
   execute:function(cpu, bytes) {
+    cpu.cycle_count+=5;
+
     var location = (bytes[1]<<8)|bytes[0];
     var low_byte = cpu.mmu.read_byte(location);
     var high_byte = cpu.mmu.read_byte(location+1);
@@ -4405,6 +4558,8 @@ var JMP_absolute_long = {
     return 4;
   },
   execute:function(cpu, bytes) {
+    cpu.cycle_count+=4;
+
     cpu.r.k = bytes[2];
     cpu.r.pc = (bytes[1]<<8)|bytes[0];
   }
@@ -4415,6 +4570,8 @@ var JMP_absolute_indirect_long = {
     return 3;
   },
   execute:function(cpu, bytes) {
+    cpu.cycle_count+=6;
+
     var location = (bytes[1]<<8)|bytes[0];
     var low_byte = cpu.mmu.read_byte(location);
     var high_byte = cpu.mmu.read_byte(location+1);
@@ -4428,6 +4585,8 @@ var JMP_absolute_indexed_x_indirect = {
     return 3;
   },
   execute:function(cpu, bytes) {
+    cpu.cycle_count+=6;
+
     var location = ((bytes[1]<<8)|bytes[0])+cpu.r.x;
     var bank = cpu.r.k;
     if(location&0x10000) {
@@ -4456,6 +4615,8 @@ var JMP_absolute = {
     return 3;
   },
   execute:function(cpu, bytes) {
+    cpu.cycle_count+=3;
+
     cpu.r.pc = (bytes[1]<<8)|bytes[0];
   } 
 };
@@ -4638,6 +4799,8 @@ var TCD = {
     return 1;
   },
   execute:function(cpu) {
+    cpu.cycle_count+=2;
+
     // Transfers 16-bits regardless of setting.
     if(cpu.p.e|cpu.p.m) {
       cpu.r.d = (cpu.r.b<<8)|cpu.r.a; 
@@ -4660,6 +4823,8 @@ var TDC = {
     return 1;
   },
   execute:function(cpu) {
+    cpu.cycle_count+=2;
+
     // Transfers 16-bits regardless of setting.
     if(cpu.p.e|cpu.p.m) {
       cpu.r.a = cpu.r.d & 0xff;
@@ -4683,6 +4848,8 @@ var TCS = {
     return 1;
   },
   execute:function(cpu) {
+    cpu.cycle_count+=2;
+
     if(cpu.p.e|!cpu.p.m) {
       cpu.r.s = cpu.r.a;
     } else {
@@ -4696,6 +4863,8 @@ var TSC = {
     return 1;
   },
   execute:function(cpu) {
+    cpu.cycle_count+=2;
+
     if(cpu.p.e) {
       cpu.r.b = 1;
       cpu.r.a = cpu.r.s;
@@ -4742,7 +4911,7 @@ var STZ_direct_page = {
     return 2;
   },
   execute: function(cpu, bytes) {
-    var location = bytes[0]+cpu.p.d;
+    var location = bytes[0]+cpu.r.d;
     if(cpu.p.e|cpu.p.m) {
       cpu.mmu.store_byte(location, 0);
     } else {
@@ -4772,7 +4941,7 @@ var STZ_direct_page_indexed_x = {
     return 2;
   },
   execute: function(cpu, bytes) {
-    var location = bytes[0]+cpu.p.d+cpu.r.x;
+    var location = bytes[0]+cpu.r.d+cpu.r.x;
     if(cpu.p.e|cpu.p.m) {
       cpu.mmu.store_byte(location, 0);
     } else {
@@ -5309,7 +5478,9 @@ var NOP = {
   bytes_required:function() {
     return 1; 
   },
-  execute:function() {}
+  execute:function() {
+    cpu.cycle_count+=2;
+  }
 };
 
 var LDY_const = {
@@ -5432,6 +5603,8 @@ var DEX = {
     return 1;
   },
   execute:function(cpu) {
+    cpu.cycle_count+=2;
+
     if(cpu.r.x===0) {
       if(cpu.p.e|cpu.p.x) {
         cpu.r.x = 0xff;
@@ -5462,6 +5635,8 @@ var DEY = {
     return 1;
   },
   execute:function(cpu) {
+    cpu.cycle_count+=2;
+
     if(cpu.r.y===0) {
       if(cpu.p.e|cpu.p.x) {
         cpu.r.y = 0xff;
@@ -5493,6 +5668,8 @@ var DEC_accumulator = {
     return 1;
   },
   execute: function(cpu) {
+    cpu.cycle_count+=2;
+
     if(cpu.r.a===0) {
       if(cpu.p.e|cpu.p.x) {
         cpu.r.a = 0xff;
@@ -5717,6 +5894,8 @@ var INX = {
     return 1;
   },
   execute:function(cpu) {
+    cpu.cycle_count+=2;
+
     cpu.r.x++;
     
     if(cpu.p.e|cpu.p.x) {
@@ -5740,7 +5919,10 @@ var INY = {
     return 1;
   },
   execute:function(cpu) {
+    cpu.cycle_count+=2;
+
     cpu.r.y++;
+
     if(cpu.p.e|cpu.p.x) {
       cpu.r.y &= 0xff;
       cpu.p.n = cpu.r.y >> 7;
@@ -5762,7 +5944,10 @@ var INC_accumulator = {
     return 1;
   },
   execute: function(cpu) {
+    cpu.cycle_count+=2;
+
     cpu.r.a++; 
+
     if(cpu.p.e|cpu.p.m) {
       cpu.r.a &= 0xff;
       cpu.p.n = cpu.r.a >> 7;
@@ -6445,9 +6630,12 @@ var LDX_const = {
 var SEP = {
   bytes_required: function() { return 2; },
   execute: function(cpu, bytes) {
-    // TODO: Handle emulation mode.
- 
+    // TODO: Figure out exactly how behavior differs in emulation mode.
+
+    cpu.cycle_count+=3;
+
     var flags = bytes[0].toString(2);
+
     // Sometimes it cuts off zeros before hand, so add those zeros back.
     while(flags.length<8) {
       flags = '0' + flags;
@@ -6472,7 +6660,9 @@ var SEP = {
 var REP = {
   bytes_required: function() { return 2; },
   execute: function(cpu, bytes) {
-    // TODO: Handle emulation mode.
+    // TODO: Figure out exactly how behavior differs in emulation mode.
+
+    cpu.cycle_count+=3;
  
     var flags = bytes[0].toString(2);
     // Sometimes it cuts off zeros before hand, so add those zeros back.
@@ -6498,6 +6688,7 @@ var XCE = {
   bytes_required: function() { return 1; },
   execute: function(cpu) {
     cpu.cycle_count+=2;
+
     var temp = cpu.p.c; 
     cpu.p.c = cpu.p.e;
     cpu.p.e = temp;        
@@ -6585,6 +6776,8 @@ var XBA = {
     return 1;
   },
   execute:function(cpu) {
+    cpu.cycle_count+=3;
+
     if(cpu.p.e|cpu.p.m) {
       cpu.cycle_count+=2;
       var old_a = cpu.r.a;
