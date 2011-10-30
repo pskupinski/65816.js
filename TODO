@@ -1,4 +1,5 @@
 Testing:
+- Tests for cycle counting
 - More tests for branching operations
 - More tests for CMP/CPY/CPX operations
 - Tests needed for JMP operations
@@ -11,7 +12,6 @@ Testing:
 CPU:
 - Figure out the exact details of how the 65816 handles illegal BCD numbers
   when decimal mode is set
-- Have each operation return the number of cycles used by the execute function.
 - Optimization
 Memory:
 - Bank wrapping or not wrapping for certain addressing modes and with certain
