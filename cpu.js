@@ -6236,7 +6236,7 @@ var DEC_accumulator = {
     cpu.cycle_count+=2;
 
     if(cpu.r.a===0) {
-      if(cpu.p.e|cpu.p.x) {
+      if(cpu.p.e|cpu.p.m) {
         cpu.r.a = 0xff;
       } else {
         cpu.r.a = 0xffff;
@@ -6245,7 +6245,7 @@ var DEC_accumulator = {
       cpu.p.z = 0;
     } else {
       cpu.r.a--; 
-      if(cpu.p.e|cpu.p.x) {
+      if(cpu.p.e|cpu.p.m) {
         cpu.r.a &= 0xff;   
         cpu.p.n = cpu.r.a >> 7;
       } else {
