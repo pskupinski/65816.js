@@ -2,4 +2,8 @@ This project's goal is to fully emulate the 65816 microprocessor in JavaScript.
 
 After achieving that goal the next step will be to create a new branch that will focus on emulating the SNES.  Any CPU related improvements that aren't specific to the SNES will be merged back.
 
-You call the execute function of the cpu object with a raw hex string representing the program you wish to emulate and it will execute those instructions as close to the 65816 as possible.
+Here is a short example of how to use the emulator:
+
+var cpu = new CPU_65816();
+cpu.load_binary("18fba9ff", 0x8000); // Load the program at 0x8000 in memory
+cpu.execute(0x8000);                 // Execute starting at 0x8000

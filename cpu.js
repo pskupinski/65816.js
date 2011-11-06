@@ -255,28 +255,23 @@ function CPU_65816() {
   /**
    * Load given program into memory and prepare for execution.
    */ 
-  this.load_program = function(raw_hex, has_header) {
-    this.mmu.load_rom(raw_hex);
-    this.r.pc = 0x8000;
-
-    // Skip the header(the first 512 bytes) if there is one present for now.
-    if(has_header) {
-      this.r.pc += 4096;
-    }
+  this.load_binary = function(raw_hex, memory_location_start) {
+    var loc = memory_location_start;
+    var byte_buffer = [];
+    for(var i = 0; i < raw_hex.length; i++) {
+      byte_buffer.push(raw_hex[i]);
+      if(byte_buffer.length===2) {
+        this.mmu.store_byte(loc, parseInt(byte_buffer[0]+byte_buffer[1],
+                                          "16"));
+        loc++;
+        byte_buffer = [];      
+      } 
+    } 
   };
 
   /**
-   * Take a raw hex string representing the program and execute it.
-   */
-  this.execute = function(raw_hex, has_header) {
-    this.load_program(raw_hex, has_header);
-    this.start(); 
-  };
-  
-  /**
-   * Step through the processing of a single byte from the current location of
-   * the program counter.
-   * TODO: Refactor the code to only process a single byte per step call
+   * Step through the processing of a single instruction from the current
+   * location of the program counter.
    */  
   this.step = function() {
     if(this.interrupt&&(!this.p.i|(this.interrupt===this.INTERRUPT.NMI))) {
@@ -364,11 +359,6 @@ function CPU_65816() {
       return;
     }
     var operation = this.opcode_map[b];
-    // Check if unsupported opcode.
-    if(operation==null) {
-      this.executing = false;
-      return;
-    }
     var bytes_required = operation.bytes_required(this);
     if(bytes_required===1) {
       operation.execute(this);
@@ -385,7 +375,12 @@ function CPU_65816() {
       this.executing = false;
   };
 
-  this.start = function() {
+  /**
+   * TODO: Add ability for this function to limit number of cpu cycles per
+   * second.
+   */
+  this.execute = function(start_address) {
+    this.r.pc = start_address;
     this.executing = true;
     while(this.executing) {
        this.step();
@@ -492,19 +487,6 @@ function MMU() {
         device.write(this.cpu, b);
     } 
     this.memory[bank][location] = b;
-  };
-
-  this.load_rom = function(raw_hex) {
-    var loc = 0x8000;
-    var byte_buffer = [];
-    for(var i = 0; i < raw_hex.length; i++) {
-      byte_buffer.push(raw_hex[i]);
-      if(byte_buffer.length===2) {
-        this.store_byte(loc, parseInt(byte_buffer[0]+byte_buffer[1], "16")); 
-        loc++;
-        byte_buffer = [];      
-      } 
-    }    
   };
 }
 
