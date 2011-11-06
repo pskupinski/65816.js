@@ -10,9 +10,11 @@ Testing:
 - Tests needed for interrupt support
 - Tests needed for the numerous other operations added
 CPU:
+- Add support for loading a binary using a url
 - Figure out the exact details of how the 65816 handles illegal BCD numbers
   when decimal mode is set
 - Optimization
+  * Use typed arrays if browser supports them
 Memory:
 - Bank wrapping or not wrapping for certain addressing modes and with certain
   settings
