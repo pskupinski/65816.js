@@ -11,7 +11,8 @@ $(document).ready(function() {
   var can_step = false;
   $("#execute").click(function() {
     cpu.reset();
-    cpu.execute($("#hex").val());
+    cpu.load_binary($("#hex").val(), 0x8000);
+    cpu.execute(0x8000);
     $("#load").removeAttr("disabled");
     updateFields();
   });

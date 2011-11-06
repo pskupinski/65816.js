@@ -375,17 +375,37 @@ function CPU_65816() {
       this.executing = false;
   };
 
-  /**
-   * TODO: Add ability for this function to limit number of cpu cycles per
-   * second.
-   */
-  this.execute = function(start_address) {
+  this.execute = function(start_address, max_cycles_per_second) {
+    // Default to 1MHz if no number given.
+    if(typeof max_cycles_per_second === "undefined")
+      max_cycles_per_second = 1000000;
+
     this.r.pc = start_address;
+    this.timer_run(max_cycles_per_second, 1000);
+  }; 
+
+  this.timer_run = function(max_cycles_per_period, period) {
+    var start = new Date().getTime();
     this.executing = true;
     while(this.executing) {
-       this.step();
+      this.step();
+      // If execution stopped other than because of the cycle count
+      if(!this.executing) {
+        return;
+      }
+      if(this.cycle_count>=max_cycles_per_period) {
+        this.executing = false;
+        var now = new Date().getTime();
+        var wait = period - (now - start);
+        this.cycle_count = 0;
+        if(wait>0) {
+          setTimeout(this.timer_run.bind(this, max_cycles_per_period, period), wait);
+        } else {
+          this.timer_run(max_cycles_per_period, period);
+        }
+      }
     }
-  }; 
+  };
 
   this.reset = function() {
     this.executing = false;
@@ -2161,7 +2181,7 @@ var EOR_direct_page_indirect_indexed_y = {
     return 2;
   },
   execute:function(cpu, bytes) {
-    cpu.cycle-count+=3;
+    cpu.cycle_count+=3;
 
     if((cpu.r.d&0xff)!=0)
       cpu.cycle_count++;
@@ -2896,7 +2916,7 @@ var AND_direct_page_indirect_long = {
     return 2;
   },
   execute:function(cpu, bytes) {
-    cpu.cycle-count+=4;
+    cpu.cycle_count+=4;
 
     if((cpu.r.d&0xff)!=0)
       cpu.cycle_count++;
