@@ -255,14 +255,18 @@ function CPU_65816() {
   /**
    * Load given program into memory and prepare for execution.
    */ 
-  this.load_binary = function(raw_hex, memory_location_start) {
+  this.load_binary = function(raw_hex, memory_location_start, bank) {
     var loc = memory_location_start;
     var byte_buffer = [];
+
+    if(typeof bank === "undefined")
+      bank = 0;
+
     for(var i = 0; i < raw_hex.length; i++) {
       byte_buffer.push(raw_hex[i]);
       if(byte_buffer.length===2) {
-        this.mmu.store_byte(loc, parseInt(byte_buffer[0]+byte_buffer[1],
-                                          "16"));
+        this.mmu.store_byte_long(loc, bank, parseInt(byte_buffer[0]+
+                                                     byte_buffer[1], "16"));
         loc++;
         byte_buffer = [];      
       } 
@@ -470,7 +474,7 @@ function MMU() {
       if(device!=null)
         return device.read(this.cpu);   
     } 
-      return this.memory[this.cpu.r.dbr][location];
+    return this.memory[this.cpu.r.dbr][location];
   };
  
   this.read_byte_long = function(location, bank) {
