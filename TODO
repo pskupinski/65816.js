@@ -10,6 +10,7 @@ Testing:
 - Tests needed for interrupt support
 - Tests needed for the numerous other operations added
 CPU:
+- Code cleanup
 - Add support for loading a binary using a url
 - Figure out the exact details of how the 65816 handles illegal BCD numbers
   when decimal mode is set
