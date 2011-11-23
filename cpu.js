@@ -62,7 +62,7 @@ function CPU_65816() {
       this.waiting = false;
       if(this.p.i) {
         if(i===this.INTERRUPT.IRQ) {
-          i = 0;
+          i = this.INTERRUPT.NO_INTERRUPT;
         } 
       }
       this.interrupt = i;
@@ -251,26 +251,26 @@ function CPU_65816() {
                       0x9a : TXS, 0xba : TSX, 0x42: WDM, 0xcb : WAI,
                       0xdb : STP };
 
-  
   /**
    * Load given program into memory and prepare for execution.
    */ 
   this.load_binary = function(raw_hex, memory_location_start, bank) {
-    var loc = memory_location_start;
     var byte_buffer = [];
 
-    if(typeof bank === "undefined")
+    if(typeof bank === "undefined") {
       bank = 0;
+    }
 
     for(var i = 0; i < raw_hex.length; i++) {
       byte_buffer.push(raw_hex[i]);
       if(byte_buffer.length===2) {
-        this.mmu.store_byte_long(loc, bank, parseInt(byte_buffer[0]+
-                                                     byte_buffer[1], "16"));
-        loc++;
-        byte_buffer = [];      
-      } 
-    } 
+        this.mmu.store_byte_long(memory_location_start, bank,
+                                 parseInt(byte_buffer[0]+byte_buffer[1],
+                                          "16"));
+        memory_location_start++;
+        byte_buffer = [];
+      }
+    }
   };
 
   /**
@@ -278,7 +278,7 @@ function CPU_65816() {
    * location of the program counter.
    */  
   this.step = function() {
-    if(this.interrupt&&(!this.p.i|(this.interrupt===this.INTERRUPT.NMI))) {
+    if(this.interrupt&&(!this.p.i||(this.interrupt===this.INTERRUPT.NMI))) {
       // Load the related interrupt vector in page 0xff of bank zero.
       if(!this.p.e) {
         this.mmu.push_byte(this.r.k); 
@@ -316,8 +316,8 @@ function CPU_65816() {
           var high_byte = this.mmu.read_byte_long(0xfff5, 0);  
           this.r.pc = (high_byte<<8)|low_byte;
         // IRQ or BRK
-        } else if(this.interrupt===this.INTERRUPT.IRQ |
-                  this.interrupt==this.INTERRUPT.BRK) {
+        } else if(this.interrupt===this.INTERRUPT.IRQ ||
+                  this.interrupt===this.INTERRUPT.BRK) {
           var low_byte = this.mmu.read_byte_long(0xfffe, 0);
           var high_byte = this.mmu.read_byte_long(0xffff, 0);  
           this.r.pc = (high_byte<<8)|low_byte;
@@ -358,7 +358,7 @@ function CPU_65816() {
     this.r.pc++;
 
     // If we reach the end of the code then stop everything.
-    if(b==null) {
+    if(typeof b === "undefined") {
       this.executing = false;
       return;
     }
@@ -381,8 +381,9 @@ function CPU_65816() {
 
   this.execute = function(start_address, max_cycles_per_second) {
     // Default to 1MHz if no number given.
-    if(typeof max_cycles_per_second === "undefined")
+    if(typeof max_cycles_per_second === "undefined") {
       max_cycles_per_second = 1000000;
+    }
 
     this.r.pc = start_address;
     this.timer_run(max_cycles_per_second, 1000);
@@ -471,9 +472,9 @@ function MMU() {
     memory_location &= 0xffff; // Make sure the address is 16 bits.
 
     var device_map_at_bank = this.memory_mapped_io_devices[this.cpu.r.dbr];
-    if(device_map_at_bank!=null) {
+    if(typeof device_map_at_bank !== "undefined") {
       var device = device_map_at_bank[memory_location];
-      if(device!=null)
+      if(typeof device !== "undefined")
         return device.read(this.cpu);   
     } 
     return this.memory[this.cpu.r.dbr][memory_location];
@@ -488,9 +489,9 @@ function MMU() {
       this.memory[bank] = {};
     }
     var device_map_at_bank = this.memory_mapped_io_devices[bank];
-    if(device_map_at_bank!=null) {
+    if(typeof device_map_at_bank !== "undefined") {
       var device = device_map_at_bank[memory_location];
-      if(device!=null)
+      if(typeof device !== "undefined")
         return device.read(this.cpu);   
     }
     return this.memory[bank][memory_location];
@@ -501,9 +502,9 @@ function MMU() {
     b &= 0xff; // Make sure the byte is actually a byte long
 
     var device_map_at_bank = this.memory_mapped_io_devices[this.cpu.r.dbr];
-    if(device_map_at_bank!=null) {
+    if(typeof device_map_at_bank !== "undefined") {
       var device = device_map_at_bank[memory_location];
-      if(device!=null) 
+      if(typeof device !== "undefined") 
         device.write(this.cpu, b);
     } 
     this.memory[this.cpu.r.dbr][memory_location] = b;
@@ -519,9 +520,9 @@ function MMU() {
       this.memory[bank] = {};
     }
     var device_map_at_bank = this.memory_mapped_io_devices[bank];
-    if(device_map_at_bank!=null) {
+    if(typeof device_map_at_bank !== "undefined") {
       var device = device_map_at_bank[memory_location];
-      if(device!=null)
+      if(typeof device !== "undefined")
         device.write(this.cpu, b);
     } 
     this.memory[bank][memory_location] = b;
@@ -564,7 +565,7 @@ var TXS = {
   execute:function(cpu) {
     cpu.cycle_count+=2;
     cpu.r.s = cpu.r.x; 
-    if(cpu.p.e|cpu.p.x) {
+    if(cpu.p.e||cpu.p.x) {
       cpu.p.n = cpu.r.s >> 7;
     } else {
       cpu.p.n = cpu.r.s >> 15;
@@ -583,7 +584,7 @@ var TSX = {
   },
   execute:function(cpu) {
     cpu.cycle_count+=2;
-    if(cpu.p.e|cpu.p.x) {
+    if(cpu.p.e||cpu.p.x) {
       cpu.r.x = cpu.r.s & 0xff;
       cpu.p.n = cpu.r.x >> 7;
     } else {
@@ -606,7 +607,7 @@ var TRB_absolute = {
     cpu.cycle_count+=6;
 
     var memory_location = (bytes[1]<<8)|bytes[0];
-    if(cpu.p.e|cpu.p.m) {
+    if(cpu.p.e||cpu.p.m) {
       var data = cpu.mmu.read_byte(memory_location);
       if((data & cpu.r.a) === 0) {
         cpu.p.z = 1;
@@ -641,11 +642,11 @@ var TRB_direct_page = {
   execute:function(cpu, bytes) {
     cpu.cycle_count+=5;
 
-    if((cpu.r.d&0xff)!=0)
+    if((cpu.r.d&0xff)!==0)
       cpu.cycle_count++;
 
     var memory_location = bytes[0] + cpu.r.d;
-    if(cpu.p.e|cpu.p.m) {
+    if(cpu.p.e||cpu.p.m) {
       var data = cpu.mmu.read_byte(memory_location);
       if((data & cpu.r.a) === 0) {
         cpu.p.z = 1;
@@ -681,7 +682,7 @@ var TSB_absolute = {
     cpu.cycle_count+=6;
 
     var memory_location = (bytes[1]<<8)|bytes[0];
-    if(cpu.p.e|cpu.p.m) {
+    if(cpu.p.e||cpu.p.m) {
       var data = cpu.mmu.read_byte(memory_location);
       if((data & cpu.r.a) === 0) {
         cpu.p.z = 1;
@@ -716,11 +717,11 @@ var TSB_direct_page = {
   execute:function(cpu, bytes) {
     cpu.cycle_count+=5;
 
-    if((cpu.r.d&0xff)!=0)
+    if((cpu.r.d&0xff)!==0)
       cpu.cycle_count++;
 
     var memory_location = bytes[0] + cpu.r.d;
-    if(cpu.p.e|cpu.p.m) {
+    if(cpu.p.e||cpu.p.m) {
       var data = cpu.mmu.read_byte(memory_location);
       if((data & cpu.r.a) === 0) {
         cpu.p.z = 1;
@@ -750,7 +751,7 @@ var TSB_direct_page = {
 
 var BIT_const = {
   bytes_required:function(cpu) {
-    if(cpu.p.e|cpu.p.m)
+    if(cpu.p.e||cpu.p.m)
       return 2;
     else 
       return 3;
@@ -759,7 +760,7 @@ var BIT_const = {
     cpu.cycle_count+=2;
 
     var and_result;
-    if(cpu.p.e|cpu.p.m) {
+    if(cpu.p.e||cpu.p.m) {
       cpu.p.n = bytes[0] >> 7;
       cpu.p.v = (bytes[0] >> 6) & 0x1;
       and_result = cpu.r.a & bytes[0];
@@ -787,7 +788,7 @@ var BIT_absolute = {
     cpu.cycle_count+=2; 
 
     var memory_location = (bytes[1]<<8)|bytes[0];
-    if(cpu.p.e|cpu.p.m) {
+    if(cpu.p.e||cpu.p.m) {
       BIT_const.execute(cpu, [cpu.mmu.read_byte(memory_location)]);
     } else {
       var low_byte = cpu.mmu.read_byte(memory_location);
@@ -804,11 +805,11 @@ var BIT_direct_page = {
   execute:function(cpu, bytes) {
     cpu.cycle_count++;
 
-    if((cpu.r.d&0xff)!=0)
+    if((cpu.r.d&0xff)!==0)
       cpu.cycle_count++;
 
     var memory_location = bytes[0] + cpu.r.d;
-    if(cpu.p.e|cpu.p.m) {
+    if(cpu.p.e||cpu.p.m) {
       BIT_const.execute(cpu, [cpu.mmu.read_byte(memory_location)]);
     } else {
       var low_byte = cpu.mmu.read_byte(memory_location);
@@ -825,7 +826,7 @@ var BIT_direct_page_indexed_x = {
   execute:function(cpu, bytes) {
     cpu.cycle_count+=2;
 
-    if((cpu.r.d&0xff)!=0)
+    if((cpu.r.d&0xff)!==0)
       cpu.cycle_count++;  
 
     if(cpu.p.e) {
@@ -867,7 +868,7 @@ var BIT_absolute_indexed_x = {
     var original_location = (bytes[1]<<8)|bytes[0];
     var memory_location = original_location+cpu.r.x;
    
-    if((original_location&0xff00)!=(memory_location&0xff00))
+    if((original_location&0xff00)!==(memory_location&0xff00))
       cpu.cycle_count++;
 
     var location_high_byte = memory_location >> 8;
@@ -955,7 +956,7 @@ var MVN = {
     cpu.mmu.store_byte(cpu.r.y, b); 
     cpu.r.x++;
     cpu.r.y++;
-    if(cpu.p.e|cpu.p.x) {
+    if(cpu.p.e||cpu.p.x) {
       cpu.r.x &= 0x00ff;
       cpu.r.y &= 0x00ff;
     } else {
@@ -963,11 +964,11 @@ var MVN = {
       cpu.r.y &= 0xffff;
     }
    
-    if(cpu.r.a!=0) {
+    if(cpu.r.a!==0) {
       cpu.r.a--;
       cpu.r.pc-=3;
     } else {
-      if(cpu.p.e|cpu.p.m)
+      if(cpu.p.e||cpu.p.m)
         cpu.r.a = 0xff; 
       else
         cpu.r.a = 0xffff;
@@ -994,7 +995,7 @@ var MVP = {
     cpu.mmu.store_byte(cpu.r.y,b); 
 
     var index_register_wrap;
-    if(cpu.p.e|cpu.p.x) {
+    if(cpu.p.e||cpu.p.x) {
       index_register_wrap = 0xff;
     } else {
       index_register_wrap = 0xffff;
@@ -1012,11 +1013,11 @@ var MVP = {
       cpu.r.x--;
     }
    
-    if(cpu.r.a!=0) {
+    if(cpu.r.a!==0) {
       cpu.r.pc-=3;
       cpu.r.a--;
     } else {
-      if(cpu.p.e|cpu.p.m)
+      if(cpu.p.e||cpu.p.m)
         cpu.r.a = 0xff; 
       else
         cpu.r.a = 0xffff;
@@ -1222,7 +1223,7 @@ var PEI = {
   execute:function(cpu, bytes) {
     cpu.cycle_count+=6;
 
-    if((cpu.r.d&0xff)!=0)
+    if((cpu.r.d&0xff)!==0)
       cpu.cycle_count++; 
 
     var memory_location = bytes[0]+cpu.r.d;
@@ -1272,7 +1273,7 @@ var PHX = {
   execute:function(cpu) {
     cpu.cycle_count+=3;
 
-    if(cpu.p.e|cpu.p.x) {
+    if(cpu.p.e||cpu.p.x) {
       cpu.mmu.push_byte(cpu.r.x);
     } else {
       cpu.cycle_count++;
@@ -1292,7 +1293,7 @@ var PLX = {
   execute:function(cpu) {
     cpu.cycle_count+=4;
 
-    if(cpu.p.e|cpu.p.x) {
+    if(cpu.p.e||cpu.p.x) {
       cpu.r.x = cpu.mmu.pull_byte();
       cpu.p.n = cpu.r.x >> 7;
     } else {
@@ -1318,7 +1319,7 @@ var PHY = {
   execute:function(cpu) {
     cpu.cycle_count+=3;
 
-    if(cpu.p.e|cpu.p.x) {
+    if(cpu.p.e||cpu.p.x) {
       cpu.mmu.push_byte(cpu.r.y);
     } else {
       cpu.cycle_count++;
@@ -1337,7 +1338,7 @@ var PLY = {
   execute:function(cpu) {
     cpu.cycle_count+=4;
 
-    if(cpu.p.e|cpu.p.x) {
+    if(cpu.p.e||cpu.p.x) {
       cpu.r.y = cpu.mmu.pull_byte();
       cpu.p.n = cpu.r.y >> 7;
     } else {
@@ -1363,7 +1364,7 @@ var PHA = {
   execute:function(cpu) {
     cpu.cycle_count+=3;
 
-    if(cpu.p.e|cpu.p.m) {
+    if(cpu.p.e||cpu.p.m) {
       cpu.mmu.push_byte(cpu.r.a);
     } else {
       cpu.cycle_count++;
@@ -1383,7 +1384,7 @@ var PLA = {
   execute:function(cpu) {
     cpu.cycle_count+=4;
 
-    if(cpu.p.e|cpu.p.m) {
+    if(cpu.p.e||cpu.p.m) {
       cpu.r.a = cpu.mmu.pull_byte();
       cpu.p.n = cpu.r.a >> 7;
     } else {
@@ -1410,7 +1411,7 @@ var ROR_accumulator = {
   execute:function(cpu) {
     cpu.cycle_count+=2;
 
-    if(cpu.p.e|cpu.p.m) {
+    if(cpu.p.e||cpu.p.m) {
       var old_c = cpu.p.c;
       cpu.p.c = cpu.r.a & 0x01;
       cpu.r.a = cpu.r.a >> 1; 
@@ -1443,7 +1444,7 @@ var ROR_absolute = {
 
     var memory_location = (bytes[1]<<8)|bytes[0]; 
     var shiftee;
-    if(cpu.p.e|cpu.p.m) {
+    if(cpu.p.e||cpu.p.m) {
       shiftee = cpu.mmu.read_byte(memory_location);
       var old_c = cpu.p.c;
       cpu.p.c = shiftee & 0x01;
@@ -1485,12 +1486,12 @@ var ROR_direct_page = {
   execute:function(cpu,bytes) {
     cpu.cycle_count+=5;
 
-    if((cpu.r.d&0xff)!=0)
+    if((cpu.r.d&0xff)!==0)
       cpu.cycle_count++;
 
     var memory_location = bytes[0]+cpu.r.d;
     var shiftee;
-    if(cpu.p.e|cpu.p.m) {
+    if(cpu.p.e||cpu.p.m) {
       shiftee = cpu.mmu.read_byte(memory_location);
       var old_c = cpu.p.c;
       cpu.p.c = shiftee & 0x01;
@@ -1557,7 +1558,7 @@ var ROL_accumulator = {
   execute:function(cpu) {
     cpu.cycle_count+=2;
 
-    if(cpu.p.e|cpu.p.m) {
+    if(cpu.p.e||cpu.p.m) {
       var old_c = cpu.p.c;
       cpu.p.c = cpu.r.a >> 7;
       cpu.r.a = cpu.r.a << 1; 
@@ -1590,7 +1591,7 @@ var ROL_absolute = {
 
     var memory_location = (bytes[1]<<8)|bytes[0];
     var shiftee;
-    if(cpu.p.e|cpu.p.m) {
+    if(cpu.p.e||cpu.p.m) {
       shiftee = cpu.mmu.read_byte(memory_location);
       var old_c = cpu.p.c;
       cpu.p.c = shiftee >> 7;
@@ -1632,12 +1633,12 @@ var ROL_direct_page = {
   execute:function(cpu, bytes) {
     cpu.cycle_count+=5;
 
-    if((cpu.r.d&0xff)!=0)
+    if((cpu.r.d&0xff)!==0)
       cpu.cycle_count++;
 
     var memory_location = bytes[0]+cpu.r.d;
     var shiftee;
-    if(cpu.p.e|cpu.p.m) {
+    if(cpu.p.e||cpu.p.m) {
       shiftee = cpu.mmu.read_byte(memory_location);
       var old_c = cpu.p.c;
       cpu.p.c = shiftee >> 7;
@@ -1704,7 +1705,7 @@ var ASL_accumulator = {
   execute:function(cpu) {
     cpu.cycle_count+=2;
 
-    if(cpu.p.e|cpu.p.m) {
+    if(cpu.p.e||cpu.p.m) {
       cpu.p.c = cpu.r.a >> 7;
       cpu.r.a = cpu.r.a << 1; 
       cpu.r.a &= 0xff;
@@ -1733,7 +1734,7 @@ var ASL_absolute = {
 
     var memory_location = (bytes[1]<<8)|bytes[0];
     var shiftee;
-    if(cpu.p.e|cpu.p.m) {
+    if(cpu.p.e||cpu.p.m) {
       shiftee = cpu.mmu.read_byte(memory_location);
       cpu.p.c = shiftee >> 7;
       shiftee = shiftee << 1; 
@@ -1770,12 +1771,12 @@ var ASL_direct_page = {
   execute:function(cpu,bytes) {
     cpu.cycle_count+=5;
 
-    if((cpu.r.d&0xff)!=0)
+    if((cpu.r.d&0xff)!==0)
       cpu.cycle_count++;
 
     var memory_location = bytes[0]+cpu.r.d;
     var shiftee;
-    if(cpu.p.e|cpu.p.m) {
+    if(cpu.p.e||cpu.p.m) {
       shiftee = cpu.mmu.read_byte(memory_location);
       cpu.p.c = shiftee >> 7;
       shiftee = shiftee << 1; 
@@ -1859,7 +1860,7 @@ var LSR_absolute = {
 
     var memory_location = (bytes[1]<<8)|bytes[0];
     var shiftee;
-    if(cpu.p.e|cpu.p.m) {
+    if(cpu.p.e||cpu.p.m) {
       shiftee = cpu.mmu.ready_byte(memory_location);
       cpu.p.c = shiftee & 0x0001;   
       shiftee = shiftee >> 1;
@@ -1894,12 +1895,12 @@ var LSR_direct_page = {
   execute:function(cpu, bytes) {
     cpu.cycle_count+=5;
 
-    if((cpu.r.d&0xff)!=0)
+    if((cpu.r.d&0xff)!==0)
       cpu.cycle_count++;
 
     var memory_location = bytes[0] + cpu.r.d;
     var shiftee;
-    if(cpu.p.e|cpu.p.m) {
+    if(cpu.p.e||cpu.p.m) {
       shiftee = cpu.mmu.ready_byte(memory_location);
       cpu.p.c = shiftee & 0x0001;
       shiftee = shiftee >> 1;
@@ -1953,7 +1954,7 @@ var LSR_direct_page_indexed_x = {
 
 var EOR_const = {
   bytes_required:function(cpu) {
-    if(cpu.p.e|cpu.p.m) {
+    if(cpu.p.e||cpu.p.m) {
       return 2;
     } else {
       return 3; 
@@ -1962,7 +1963,7 @@ var EOR_const = {
   execute:function(cpu, bytes) {
     cpu.cycle_count+=2;
 
-    if(cpu.p.e|cpu.p.m) {
+    if(cpu.p.e||cpu.p.m) {
       cpu.r.a ^= bytes[0];
       cpu.p.n = cpu.r.a >> 7;
     } else {
@@ -1987,7 +1988,7 @@ var EOR_absolute = {
     cpu.cycle_count+=2;
 
     var memory_location = (bytes[1]<<8)|bytes[0];
-    if(cpu.p.e|cpu.p.m) {
+    if(cpu.p.e||cpu.p.m) {
       EOR_const.execute(cpu, [cpu.mmu.read_byte(memory_location)]);
     } else {
       var low_byte = cpu.mmu.read_byte(memory_location);
@@ -2005,7 +2006,7 @@ var EOR_absolute_long = {
     cpu.cycle_count+=3;
 
     var memory_location = (bytes[1]<<8)|bytes[0];
-    if(cpu.p.e|cpu.p.m) {
+    if(cpu.p.e||cpu.p.m) {
       EOR_const.execute(cpu, [cpu.mmu.read_byte_long(memory_location, bytes[2])]);
     } else {
       var low_byte = cpu.mmu.read_byte_long(memory_location, bytes[2]);
@@ -2028,7 +2029,7 @@ var EOR_absolute_long_indexed_x = {
       memory_location &= 0xffff;      
     }
 
-    if(cpu.p.e|cpu.p.m) {
+    if(cpu.p.e||cpu.p.m) {
       EOR_const.execute(cpu, [cpu.mmu.read_byte_long(memory_location, bytes[2])]);
     } else {
       var low_byte = cpu.mmu.read_byte_long(memory_location, bytes[2]);
@@ -2050,11 +2051,11 @@ var EOR_direct_page = {
   execute:function(cpu, bytes) {
     cpu.cycle_count++;
 
-    if((cpu.r.d&0xff)!=0)
+    if((cpu.r.d&0xff)!==0)
       cpu.cycle_count++;
 
     var memory_location = bytes[0] + cpu.r.d;
-    if(cpu.p.e|cpu.p.m) {
+    if(cpu.p.e||cpu.p.m) {
       EOR_const.execute(cpu, [cpu.mmu.read_byte(memory_location)]);
     } else {
       var low_byte = cpu.mmu.read_byte(memory_location);
@@ -2071,14 +2072,14 @@ var EOR_direct_page_indirect = {
   execute:function(cpu, bytes) {
     cpu.cycle_count+=3;
 
-    if((cpu.r.d&0xff)!=0)
+    if((cpu.r.d&0xff)!==0)
       cpu.cycle_count++;
 
     var memory_location = bytes[0] + cpu.r.d;
     var low_byte_loc = cpu.mmu.read_byte(memory_location);
     var high_byte_loc = cpu.mmu.read_byte(memory_location+1);
     var absolute_location = (high_byte_loc<<8) | low_byte_loc;
-    if(cpu.p.e|cpu.p.m) {
+    if(cpu.p.e||cpu.p.m) {
       EOR_const.execute(cpu, [cpu.mmu.read_byte(absolute_location)]);
     } else {
       var low_byte = cpu.mmu.read_byte(absolute_location);
@@ -2095,7 +2096,7 @@ var EOR_direct_page_indexed_x_indirect = {
   execute:function(cpu, bytes) {
     cpu.cycle_count+=4;
 
-    if((cpu.r.d&0xff)!=0)
+    if((cpu.r.d&0xff)!==0)
       cpu.cycle_count++;
 
     if(cpu.p.e) {
@@ -2136,7 +2137,7 @@ var EOR_direct_page_indirect_long_indexed_y = {
   execute:function(cpu, bytes) {
     cpu.cycle_count+=4;
 
-    if((cpu.r.d&0xff)!=0)
+    if((cpu.r.d&0xff)!==0)
       cpu.cycle_count++;
 
     var memory_location = bytes[0] + cpu.r.d;
@@ -2148,7 +2149,7 @@ var EOR_direct_page_indirect_long_indexed_y = {
       absolute_location &= 0xffff;
       bank_byte++;
     }
-    if(cpu.p.e|cpu.p.m) {
+    if(cpu.p.e||cpu.p.m) {
       EOR_const.execute(cpu, [cpu.mmu.read_byte_long(absolute_location,
                                                      bank_byte)]);
     } else {
@@ -2171,7 +2172,7 @@ var EOR_direct_page_indirect_long = {
   execute:function(cpu, bytes) {
     cpu.cycle_count+=4;
 
-    if((cpu.r.d&0xff)!=0)
+    if((cpu.r.d&0xff)!==0)
       cpu.cycle_count++;
 
     var memory_location = bytes[0] + cpu.r.d;
@@ -2179,7 +2180,7 @@ var EOR_direct_page_indirect_long = {
     var high_byte_loc = cpu.mmu.read_byte(memory_location+1);
     var bank_byte = cpu.mmu.read_byte(memory_location+2);
     var absolute_location = (high_byte_loc<<8) | low_byte_loc;
-    if(cpu.p.e|cpu.p.m) {
+    if(cpu.p.e||cpu.p.m) {
       EOR_const.execute(cpu, [cpu.mmu.read_byte_long(absolute_location,
                                                      bank_byte)]);
     } else {
@@ -2197,7 +2198,7 @@ var EOR_direct_page_indirect_indexed_y = {
   execute:function(cpu, bytes) {
     cpu.cycle_count+=3;
 
-    if((cpu.r.d&0xff)!=0)
+    if((cpu.r.d&0xff)!==0)
       cpu.cycle_count++;
 
     var memory_location = bytes[0] + cpu.r.d;
@@ -2207,10 +2208,10 @@ var EOR_direct_page_indirect_indexed_y = {
     var original_location = (high_byte_loc<<8) | low_byte_loc;
     var absolute_location = original_location + cpu.r.y;
 
-    if((original_location&0xff00)!=(absolute_location&0xff00))
+    if((original_location&0xff00)!==(absolute_location&0xff00))
       cpu.cycle_count++;
 
-    if(cpu.p.e|cpu.p.m) {
+    if(cpu.p.e||cpu.p.m) {
       EOR_const.execute(cpu, [cpu.mmu.read_byte(absolute_location)]);
     } else {
       var low_byte = cpu.mmu.read_byte(absolute_location);
@@ -2228,7 +2229,7 @@ var EOR_absolute_indexed_x = {
     var original_location = (bytes[1]<<8)|bytes[0];
     var memory_location = original_location+cpu.r.x;
 
-    if((original_location&0xff00)!=(memory_location&0xff00))
+    if((original_location&0xff00)!==(memory_location&0xff00))
       cpu.cycle_count++;
 
     var location_high_byte = memory_location >> 8;
@@ -2245,7 +2246,7 @@ var EOR_absolute_indexed_y = {
     var original_location = (bytes[1]<<8)|bytes[0];
     var memory_location = original_location+cpu.r.y;
   
-    if((original_location&0xff00)!=(memory_location&0xff00))
+    if((original_location&0xff00)!==(memory_location&0xff00))
       cpu.cycle_count++;
 
     var location_high_byte = memory_location >> 8;
@@ -2349,7 +2350,7 @@ var EOR_stack_relative_indirect_indexed_y = {
 
 var ORA_const = {
   bytes_required:function(cpu) {
-    if(cpu.p.e|cpu.p.m) {
+    if(cpu.p.e||cpu.p.m) {
       return 2;
     } else {
       return 3; 
@@ -2358,7 +2359,7 @@ var ORA_const = {
   execute:function(cpu, bytes) {
     cpu.cycle_count+=2;
 
-    if(cpu.p.e|cpu.p.m) {
+    if(cpu.p.e||cpu.p.m) {
       cpu.r.a |= bytes[0];
       cpu.p.n = cpu.r.a >> 7;
     } else {
@@ -2384,7 +2385,7 @@ var ORA_absolute = {
     cpu.cycle_count+=2;
 
     var memory_location = (bytes[1]<<8)|bytes[0];
-    if(cpu.p.e|cpu.p.m) {
+    if(cpu.p.e||cpu.p.m) {
       ORA_const.execute(cpu, [cpu.mmu.read_byte(memory_location)]);
     } else {
       var low_byte = cpu.mmu.read_byte(memory_location);
@@ -2402,7 +2403,7 @@ var ORA_absolute_long = {
     cpu.cycle_count+=3;
 
     var memory_location = (bytes[1]<<8)|bytes[0];
-    if(cpu.p.e|cpu.p.m) {
+    if(cpu.p.e||cpu.p.m) {
       ORA_const.execute(cpu, [cpu.mmu.read_byte_long(memory_location, 
                                                      bytes[2])]);
     } else {
@@ -2426,7 +2427,7 @@ var ORA_absolute_long_indexed_x = {
       memory_location &= 0xffff;      
     }
 
-    if(cpu.p.e|cpu.p.m) {
+    if(cpu.p.e||cpu.p.m) {
       ORA_const.execute(cpu, [cpu.mmu.read_byte_long(memory_location, bytes[2])]);
     } else {
       var low_byte = cpu.mmu.read_byte_long(memory_location, bytes[2]);
@@ -2448,11 +2449,11 @@ var ORA_direct_page = {
   execute:function(cpu, bytes) {
     cpu.cycle_count++;
 
-    if((cpu.r.d&0xff)!=0)
+    if((cpu.r.d&0xff)!==0)
       cpu.cycle_count++;
 
     var memory_location = bytes[0] + cpu.r.d;
-    if(cpu.p.e|cpu.p.m) {
+    if(cpu.p.e||cpu.p.m) {
       ORA_const.execute(cpu, [cpu.mmu.read_byte(memory_location)]);
     } else {
       var low_byte = cpu.mmu.read_byte(memory_location);
@@ -2469,14 +2470,14 @@ var ORA_direct_page_indirect = {
   execute:function(cpu, bytes) {
     cpu.cycle_count+=3;
 
-    if((cpu.r.d&0xff)!=0)
+    if((cpu.r.d&0xff)!==0)
       cpu.cycle_count++;
 
     var memory_location = bytes[0] + cpu.r.d;
     var low_byte_loc = cpu.mmu.read_byte(memory_location);
     var high_byte_loc = cpu.mmu.read_byte(memory_location+1);
     var absolute_location = (high_byte_loc<<8) | low_byte_loc;
-    if(cpu.p.e|cpu.p.m) {
+    if(cpu.p.e||cpu.p.m) {
       ORA_const.execute(cpu, [cpu.mmu.read_byte(absolute_location)]);
     } else {
       var low_byte = cpu.mmu.read_byte(absolute_location);
@@ -2493,7 +2494,7 @@ var ORA_direct_page_indexed_x_indirect = {
   execute:function(cpu, bytes) {
     cpu.cycle_count+=4;
 
-    if((cpu.r.d&0xff)!=0)
+    if((cpu.r.d&0xff)!==0)
       cpu.cycle_count++;
 
     if(cpu.p.e) {
@@ -2534,7 +2535,7 @@ var ORA_direct_page_indirect_long = {
   execute:function(cpu, bytes) {
     cpu.cycle_count+=4;
 
-    if((cpu.r.d&0xff)!=0)
+    if((cpu.r.d&0xff)!==0)
       cpu.cycle_count++;
 
     var memory_location = bytes[0] + cpu.r.d;
@@ -2542,7 +2543,7 @@ var ORA_direct_page_indirect_long = {
     var high_byte_loc = cpu.mmu.read_byte(memory_location+1);
     var bank_byte = cpu.mmu.read_byte(memory_location+2);
     var absolute_location = (high_byte_loc<<8) | low_byte_loc;
-    if(cpu.p.e|cpu.p.m) {
+    if(cpu.p.e||cpu.p.m) {
       ORA_const.execute(cpu, [cpu.mmu.read_byte_long(absolute_location,
                                                      bank_byte)]);
     } else {
@@ -2560,7 +2561,7 @@ var ORA_direct_page_indirect_long_indexed_y = {
   execute:function(cpu, bytes) {
     cpu.cycle_count+=4;
 
-    if((cpu.r.d&0xff)!=0)
+    if((cpu.r.d&0xff)!==0)
       cpu.cycle_count++;
 
     var memory_location = bytes[0] + cpu.r.d;
@@ -2572,7 +2573,7 @@ var ORA_direct_page_indirect_long_indexed_y = {
       absolute_location &= 0xffff;
       bank_byte++;
     }
-    if(cpu.p.e|cpu.p.m) {
+    if(cpu.p.e||cpu.p.m) {
       ORA_const.execute(cpu, [cpu.mmu.read_byte_long(absolute_location,
                               bank_byte)]);
     } else {
@@ -2594,7 +2595,7 @@ var ORA_direct_page_indirect_indexed_y = {
   execute:function(cpu, bytes) {
     cpu.cycle_count+=3;
 
-    if((cpu.r.d&0xff)!=0)
+    if((cpu.r.d&0xff)!==0)
       cpu.cycle_count++;
 
     var memory_location = bytes[0] + cpu.r.d;
@@ -2603,10 +2604,10 @@ var ORA_direct_page_indirect_indexed_y = {
     var original_location = (high_byte_loc<<8) | low_byte_loc;
     var absolute_location = original_location + cpu.r.y;
 
-    if((original_location&0xff00)!=(absolute_location&0xff00))
+    if((original_location&0xff00)!==(absolute_location&0xff00))
       cpu.cycle_count++;
 
-    if(cpu.p.e|cpu.p.m) {
+    if(cpu.p.e||cpu.p.m) {
       ORA_const.execute(cpu, [cpu.mmu.read_byte(absolute_location)]);
     } else {
       var low_byte = cpu.mmu.read_byte(absolute_location);
@@ -2624,7 +2625,7 @@ var ORA_absolute_indexed_x = {
     var original_location = (bytes[1]<<8)|bytes[0];
     var memory_location = original_location+cpu.r.x;
 
-    if((memory_location&0xff00)!=(original_location&0xff00))
+    if((memory_location&0xff00)!==(original_location&0xff00))
       cpu.cycle_count++;  
 
     var location_high_byte = memory_location >> 8;
@@ -2641,7 +2642,7 @@ var ORA_absolute_indexed_y = {
     var original_location = (bytes[1]<<8)|bytes[0];
     var memory_location = ((bytes[1]<<8)|bytes[0])+cpu.r.y;
 
-    if((original_location&0xff00)!=(memory_location&0xff00))
+    if((original_location&0xff00)!==(memory_location&0xff00))
       cpu.cycle_count++;
 
     var location_high_byte = memory_location >> 8;
@@ -2744,7 +2745,7 @@ var ORA_stack_relative_indirect_indexed_y = {
 
 var AND_const = {
   bytes_required:function(cpu) {
-    if(cpu.p.e|cpu.p.m) {
+    if(cpu.p.e||cpu.p.m) {
       return 2;
     } else {
       return 3; 
@@ -2753,7 +2754,7 @@ var AND_const = {
   execute:function(cpu, bytes) {
     cpu.cycle_count+=2;
 
-    if(cpu.p.e|cpu.p.m) {
+    if(cpu.p.e||cpu.p.m) {
       cpu.r.a &= bytes[0];
       cpu.p.n = cpu.r.a >> 7;
     } else {
@@ -2779,7 +2780,7 @@ var AND_absolute = {
     cpu.cycle_count+=2;
 
     var memory_location = (bytes[1]<<8)|bytes[0];
-    if(cpu.p.e|cpu.p.m) {
+    if(cpu.p.e||cpu.p.m) {
       AND_const.execute(cpu, [cpu.mmu.read_byte(memory_location)]);
     } else {
       var low_byte = cpu.mmu.read_byte(memory_location);
@@ -2797,7 +2798,7 @@ var AND_absolute_long = {
     cpu.cycle_count+=3;
 
     var memory_location = (bytes[1]<<8)|bytes[0];
-    if(cpu.p.e|cpu.p.m) {
+    if(cpu.p.e||cpu.p.m) {
       AND_const.execute(cpu, [cpu.mmu.read_byte_long(memory_location, bytes[2])]);
     } else {
       var low_byte = cpu.mmu.read_byte_long(memory_location, bytes[2]);
@@ -2820,7 +2821,7 @@ var AND_absolute_long_indexed_x = {
       memory_location &= 0xffff;      
     }
 
-    if(cpu.p.e|cpu.p.m) {
+    if(cpu.p.e||cpu.p.m) {
       AND_const.execute(cpu, [cpu.mmu.read_byte_long(memory_location, bytes[2])]);
     } else {
       var low_byte = cpu.mmu.read_byte_long(memory_location, bytes[2]);
@@ -2842,11 +2843,11 @@ var AND_direct_page = {
   execute:function(cpu, bytes) {
     cpu.cycle_count++;
 
-    if((cpu.r.d&0xff)!=0)
+    if((cpu.r.d&0xff)!==0)
       cpu.cycle_count++;
 
     var memory_location = bytes[0] + cpu.r.d;
-    if(cpu.p.e|cpu.p.m) {
+    if(cpu.p.e||cpu.p.m) {
       AND_const.execute(cpu, [cpu.mmu.read_byte(memory_location)]);
     } else {
       var low_byte = cpu.mmu.read_byte(memory_location);
@@ -2863,14 +2864,14 @@ var AND_direct_page_indirect = {
   execute:function(cpu, bytes) {
     cpu.cycle_count+=3;
 
-    if((cpu.r.d&0xff)!=0)
+    if((cpu.r.d&0xff)!==0)
       cpu.cycle_count++;
 
     var memory_location = bytes[0] + cpu.r.d;
     var low_byte_loc = cpu.mmu.read_byte(memory_location);
     var high_byte_loc = cpu.mmu.read_byte(memory_location+1);
     var absolute_location = (high_byte_loc<<8) | low_byte_loc;
-    if(cpu.p.e|cpu.p.m) {
+    if(cpu.p.e||cpu.p.m) {
       AND_const.execute(cpu, [cpu.mmu.read_byte(absolute_location)]);
     } else {
       var low_byte = cpu.mmu.read_byte(absolute_location);
@@ -2887,7 +2888,7 @@ var AND_direct_page_indexed_x_indirect = {
   execute:function(cpu, bytes) {
     cpu.cycle_count+=4;
 
-    if((cpu.r.d&0xff)!=0)
+    if((cpu.r.d&0xff)!==0)
       cpu.cycle_count++;
 
     if(cpu.p.e) {
@@ -2928,7 +2929,7 @@ var AND_direct_page_indirect_long = {
   execute:function(cpu, bytes) {
     cpu.cycle_count+=4;
 
-    if((cpu.r.d&0xff)!=0)
+    if((cpu.r.d&0xff)!==0)
       cpu.cycle_count++;
 
     var memory_location = bytes[0] + cpu.r.d;
@@ -2936,7 +2937,7 @@ var AND_direct_page_indirect_long = {
     var high_byte_loc = cpu.mmu.read_byte(memory_location+1);
     var bank_byte = cpu.mmu.read_byte(memory_location+2);
     var absolute_location = (high_byte_loc<<8) | low_byte_loc;
-    if(cpu.p.e|cpu.p.m) {
+    if(cpu.p.e||cpu.p.m) {
       AND_const.execute(cpu, [cpu.mmu.read_byte_long(absolute_location,
                                                      bank_byte)]);
     } else {
@@ -2954,7 +2955,7 @@ var AND_direct_page_indirect_long_indexed_y = {
   execute:function(cpu, bytes) {
     cpu.cycle_count+=4;
 
-    if((cpu.r.d&0xff)!=0)
+    if((cpu.r.d&0xff)!==0)
       cpu.cycle_count++; 
 
     var memory_location = bytes[0] + cpu.r.d;
@@ -2966,7 +2967,7 @@ var AND_direct_page_indirect_long_indexed_y = {
       absolute_location &= 0xffff;
       bank_byte++;
     }
-    if(cpu.p.e|cpu.p.m) {
+    if(cpu.p.e||cpu.p.m) {
       AND_const.execute(cpu, [cpu.mmu.read_byte_long(absolute_location,
                                                      bank_byte)]);
     } else {
@@ -2989,7 +2990,7 @@ var AND_direct_page_indirect_indexed_y = {
   execute:function(cpu, bytes) {
     cpu.cycle_count+=3;
 
-    if((cpu.r.d&0xff)!=0)
+    if((cpu.r.d&0xff)!==0)
       cpu.cycle_count++;
 
     var memory_location = bytes[0] + cpu.r.d;
@@ -2998,10 +2999,10 @@ var AND_direct_page_indirect_indexed_y = {
     var original_location = (high_byte_loc<<8) | low_byte_loc;
     var absolute_location = original_location + cpu.r.y;
 
-    if((original_location&0xff00)!=(absolute_location&0xff00))
+    if((original_location&0xff00)!==(absolute_location&0xff00))
       cpu.cycle_count++;
 
-    if(cpu.p.e|cpu.p.m) {
+    if(cpu.p.e||cpu.p.m) {
       AND_const.execute(cpu, [cpu.mmu.read_byte(absolute_location)]);
     } else {
       var low_byte = cpu.mmu.read_byte(absolute_location);
@@ -3019,7 +3020,7 @@ var AND_absolute_indexed_x = {
     var original_location = (bytes[1]<<8)|bytes[0];
     var memory_location = original_location+cpu.r.x;
 
-    if((memory_location&0xff00)!=(original_location&0xff00))
+    if((memory_location&0xff00)!==(original_location&0xff00))
       cpu.cycle_count++;
 
     var location_high_byte = memory_location >> 8;
@@ -3036,7 +3037,7 @@ var AND_absolute_indexed_y = {
     var original_location = (bytes[1]<<8)|bytes[0];
     var memory_location = original_location+cpu.r.y;
 
-    if((original_location&0xff00)!=(memory_location&0xff00))
+    if((original_location&0xff00)!==(memory_location&0xff00))
       cpu.cycle_count++;
 
     var location_high_byte = memory_location >> 8;
@@ -3140,7 +3141,7 @@ var AND_stack_relative_indirect_indexed_y = {
 
 var CPX_const = {
   bytes_required:function(cpu) {
-    if(cpu.p.e|cpu.p.x) {
+    if(cpu.p.e||cpu.p.x) {
       return 2; 
     } else {
       return 3; 
@@ -3150,7 +3151,7 @@ var CPX_const = {
     cpu.cycle_count+=2;
 
     var result;
-    if(cpu.p.e|cpu.p.x) {
+    if(cpu.p.e||cpu.p.x) {
       result = cpu.r.x - bytes[0];  
       if(result<0) {
         cpu.p.c = 0;
@@ -3187,11 +3188,11 @@ var CPX_direct_page = {
   execute:function(cpu, bytes) {
     cpu.cycle_count++;
 
-    if((cpu.r.d&0xff)!=0)
+    if((cpu.r.d&0xff)!==0)
       cpu.cycle_count++;
 
     var memory_location = bytes[0] + cpu.r.d;
-    if(cpu.p.e|cpu.p.m) {
+    if(cpu.p.e||cpu.p.m) {
       CPX_const.execute(cpu, [cpu.mmu.read_byte(memory_location)]);
     } else {
       var low_byte = cpu.mmu.read_byte(memory_location);
@@ -3209,7 +3210,7 @@ var CPX_absolute = {
     cpu.cycle_count+=2;
 
     var memory_location = (bytes[1]<<8)|bytes[0];
-    if(cpu.p.e|cpu.p.x) {
+    if(cpu.p.e||cpu.p.x) {
       CPX_const.execute(cpu, [cpu.mmu.read_byte(memory_location)]);
     } else {
       var low_byte = cpu.mmu.read_byte(memory_location);
@@ -3221,7 +3222,7 @@ var CPX_absolute = {
 
 var CPY_const = {
   bytes_required:function(cpu) {
-    if(cpu.p.e|cpu.p.x) {
+    if(cpu.p.e||cpu.p.x) {
       return 2; 
     } else {
       return 3; 
@@ -3231,7 +3232,7 @@ var CPY_const = {
     cpu.cycle_count+=2;
 
     var result;
-    if(cpu.p.e|cpu.p.x) {
+    if(cpu.p.e||cpu.p.x) {
       result = cpu.r.y - bytes[0];  
       if(result<0) {
         cpu.p.c = 0;
@@ -3267,11 +3268,11 @@ var CPY_direct_page = {
   execute:function(cpu, bytes) {
     cpu.cycle_count++;
 
-    if((cpu.r.d&0xff)!=0)
+    if((cpu.r.d&0xff)!==0)
       cpu.cycle_count++;
 
     var memory_location = bytes[0] + cpu.r.d;
-    if(cpu.p.e|cpu.p.m) {
+    if(cpu.p.e||cpu.p.m) {
       CPY_const.execute(cpu, [cpu.mmu.read_byte(memory_location)]);
     } else {
       var low_byte = cpu.mmu.read_byte(memory_location);
@@ -3289,7 +3290,7 @@ var CPY_absolute = {
     cpu.cycle_count+=2;
 
     var memory_location = (bytes[1]<<8)|bytes[0];
-    if(cpu.p.e|cpu.p.x) {
+    if(cpu.p.e||cpu.p.x) {
       CPY_const.execute(cpu, [cpu.mmu.read_byte(memory_location)]);
     } else {
       var low_byte = cpu.mmu.read_byte(memory_location);
@@ -3301,7 +3302,7 @@ var CPY_absolute = {
 
 var CMP_const = {
   bytes_required:function(cpu) {
-    if(cpu.p.e|cpu.p.m) {
+    if(cpu.p.e||cpu.p.m) {
       return 2; 
     } else {
       return 3; 
@@ -3311,7 +3312,7 @@ var CMP_const = {
     cpu.cycle_count+=2;
 
     var result;
-    if(cpu.p.e|cpu.p.m) {
+    if(cpu.p.e||cpu.p.m) {
       result = cpu.r.a - bytes[0];  
       if(result<0) {
         cpu.p.c = 0;
@@ -3348,11 +3349,11 @@ var CMP_direct_page = {
   execute:function(cpu, bytes) {
     cpu.cycle_count++;
 
-    if((cpu.r.d&0xff)!=0)
+    if((cpu.r.d&0xff)!==0)
       cpu.cycle_count++;
 
     var memory_location = bytes[0] + cpu.r.d;
-    if(cpu.p.e|cpu.p.m) {
+    if(cpu.p.e||cpu.p.m) {
       CMP_const.execute(cpu, [cpu.mmu.read_byte(memory_location)]);
     } else {
       var low_byte = cpu.mmu.read_byte(memory_location);
@@ -3380,14 +3381,14 @@ var CMP_direct_page_indirect = {
   execute:function(cpu, bytes) {
     cpu.cycle_count+=3;
 
-    if((cpu.r.d&0xff)!=0)
+    if((cpu.r.d&0xff)!==0)
       cpu.cycle_count++;
 
     var memory_location = bytes[0] + cpu.r.d;
     var low_byte_loc = cpu.mmu.read_byte(memory_location);
     var high_byte_loc = cpu.mmu.read_byte(memory_location+1);
     var absolute_location = (high_byte_loc<<8) | low_byte_loc;
-    if(cpu.p.e|cpu.p.m) {
+    if(cpu.p.e||cpu.p.m) {
       CMP_const.execute(cpu, [cpu.mmu.read_byte(absolute_location)]);
     } else {
       var low_byte = cpu.mmu.read_byte(absolute_location);
@@ -3404,7 +3405,7 @@ var CMP_direct_page_indexed_x_indirect = {
   execute:function(cpu, bytes) {
     cpu.cycle_count+=4;
 
-    if((cpu.r.d&0xff)!=0)
+    if((cpu.r.d&0xff)!==0)
       cpu.cycle_count++;
 
     if(cpu.p.e) {
@@ -3445,7 +3446,7 @@ var CMP_direct_page_indirect_long = {
   execute:function(cpu, bytes) {
     cpu.cycle_count+=4;
 
-    if((cpu.r.d&0xff)!=0)
+    if((cpu.r.d&0xff)!==0)
       cpu.cycle_count++; 
 
     var memory_location = bytes[0] + cpu.r.d;
@@ -3453,7 +3454,7 @@ var CMP_direct_page_indirect_long = {
     var high_byte_loc = cpu.mmu.read_byte(memory_location+1);
     var bank_byte = cpu.mmu.read_byte(memory_location+2);
     var absolute_location = (high_byte_loc<<8) | low_byte_loc;
-    if(cpu.p.e|cpu.p.m) {
+    if(cpu.p.e||cpu.p.m) {
       CMP_const.execute(cpu, [cpu.mmu.read_byte_long(absolute_location,
                                                      bank_byte)]);
     } else {
@@ -3471,7 +3472,7 @@ var CMP_direct_page_indirect_long_indexed_y = {
   execute:function(cpu, bytes) {
     cpu.cycle_count+=4;
 
-    if((cpu.r.d&0xff)!=0)
+    if((cpu.r.d&0xff)!==0)
       cpu.cycle_count++;
 
     var memory_location = bytes[0] + cpu.r.d;
@@ -3483,7 +3484,7 @@ var CMP_direct_page_indirect_long_indexed_y = {
       absolute_location &= 0xffff;
       bank_byte++;
     }
-    if(cpu.p.e|cpu.p.m) {
+    if(cpu.p.e||cpu.p.m) {
       CMP_const.execute(cpu, [cpu.mmu.read_byte_long(absolute_location,
                                                      bank_byte)]);
     } else {
@@ -3506,7 +3507,7 @@ var CMP_direct_page_indirect_indexed_y = {
   execute:function(cpu, bytes) {
     cpu.cycle_count+=3;
 
-    if((cpu.r.d&0xff)!=0)
+    if((cpu.r.d&0xff)!==0)
       cpu.cycle_count++;  
 
     var memory_location = bytes[0] + cpu.r.d;
@@ -3516,10 +3517,10 @@ var CMP_direct_page_indirect_indexed_y = {
     var original_location = (high_byte_loc<<8) | low_byte_loc;
     var absolute_location = original_location + cpu.r.y;
 
-    if((original_location&0xff00)!=(absolute_location&0xff00))
+    if((original_location&0xff00)!==(absolute_location&0xff00))
       cpu.cycle_count++;
 
-    if(cpu.p.e|cpu.p.m) {
+    if(cpu.p.e||cpu.p.m) {
       CMP_const.execute(cpu, [cpu.mmu.read_byte(absolute_location)]);
     } else {
       var low_byte = cpu.mmu.read_byte(absolute_location);
@@ -3537,7 +3538,7 @@ var CMP_absolute = {
     cpu.cycle_count+=2;
 
     var memory_location = (bytes[1]<<8)|bytes[0];
-    if(cpu.p.e|cpu.p.m) {
+    if(cpu.p.e||cpu.p.m) {
       CMP_const.execute(cpu, [cpu.mmu.read_byte(memory_location)]);
     } else {
       var low_byte = cpu.mmu.read_byte(memory_location);
@@ -3555,7 +3556,7 @@ var CMP_absolute_long = {
     cpu.cycle_count+=3;
 
     var memory_location = (bytes[1]<<8)|bytes[0];
-    if(cpu.p.e|cpu.p.m) {
+    if(cpu.p.e||cpu.p.m) {
       CMP_const.execute(cpu, [cpu.mmu.read_byte_long(memory_location, 
                                                      bytes[2])]);
     } else {
@@ -3579,7 +3580,7 @@ var CMP_absolute_long_indexed_x = {
       memory_location &= 0xffff;      
     }
 
-    if(cpu.p.e|cpu.p.m) {
+    if(cpu.p.e||cpu.p.m) {
       CMP_const.execute(cpu, [cpu.mmu.read_byte_long(memory_location, bytes[2])]);
     } else {
       var low_byte = cpu.mmu.read_byte_long(memory_location, bytes[2]);
@@ -3602,7 +3603,7 @@ var CMP_absolute_indexed_x = {
     var original_location = (bytes[1]<<8)|bytes[0];
     var memory_location = original_location+cpu.r.x;
 
-    if((original_location&0xff00)!=(memory_location&0xff00))
+    if((original_location&0xff00)!==(memory_location&0xff00))
       cpu.cycle_count++;
 
     var location_high_byte = memory_location >> 8;
@@ -3619,7 +3620,7 @@ var CMP_absolute_indexed_y = {
     var original_location = (bytes[1]<<8)|bytes[0];
     var memory_location = original_location+cpu.r.y;
 
-    if((original_location&0xff00)!=(memory_location&0xff00))
+    if((original_location&0xff00)!==(memory_location&0xff00))
       cpu.cycle_count++;
 
     var location_high_byte = memory_location >> 8;
@@ -3711,7 +3712,7 @@ var CMP_stack_relative_indirect_indexed_y = {
 
 var SBC_const = {
   bytes_required:function(cpu) {
-    if(cpu.p.e|cpu.p.m) {
+    if(cpu.p.e||cpu.p.m) {
       return 2;
     } else {
       return 3;
@@ -3725,7 +3726,7 @@ var SBC_const = {
     if(cpu.p.c===0) 
       temp = 1;
 
-    if(cpu.p.e|cpu.p.m) {
+    if(cpu.p.e||cpu.p.m) {
       if(cpu.p.d) {
          // Form a decimal number out of a.
         var ones = cpu.r.a & 0x0f;        
@@ -3842,11 +3843,11 @@ var SBC_direct_page = {
   execute:function(cpu, bytes) {
     cpu.cycle_count++; 
 
-    if((cpu.r.d&0xff)!=0)
+    if((cpu.r.d&0xff)!==0)
       cpu.cycle_count++;
 
     var memory_location = bytes[0] + cpu.r.d;
-    if(cpu.p.e|cpu.p.m) {
+    if(cpu.p.e||cpu.p.m) {
       SBC_const.execute(cpu, [cpu.mmu.read_byte(memory_location)]); 
     } else {
       var low_byte = cpu.mmu.read_byte(memory_location);
@@ -3864,7 +3865,7 @@ var SBC_absolute = {
     cpu.cycle_count+=2;
 
     var memory_location = (bytes[1]<<8)|bytes[0];
-    if(cpu.p.e|cpu.p.m) {
+    if(cpu.p.e||cpu.p.m) {
       SBC_const.execute(cpu, [cpu.mmu.read_byte(memory_location)]);
     } else {
       var low_byte = cpu.mmu.read_byte(memory_location);
@@ -3882,7 +3883,7 @@ var SBC_absolute_long = {
     cpu.cycle_count+=3;
 
     var memory_location = (bytes[1]<<8)|bytes[0];
-    if(cpu.p.e|cpu.p.m) {
+    if(cpu.p.e||cpu.p.m) {
       SBC_const.execute(cpu, [cpu.mmu.read_byte_long(memory_location, bytes[2])]);
     } else {
       var low_byte = cpu.mmu.read_byte_long(memory_location, bytes[2]);
@@ -3905,7 +3906,7 @@ var SBC_absolute_long_indexed_x = {
       memory_location &= 0xffff;      
     }
 
-    if(cpu.p.e|cpu.p.m) {
+    if(cpu.p.e||cpu.p.m) {
       SBC_const.execute(cpu, [cpu.mmu.read_byte_long(memory_location, bytes[2])]);
     } else {
       var low_byte = cpu.mmu.read_byte_long(memory_location, bytes[2]);
@@ -3926,7 +3927,7 @@ var SBC_direct_page_indexed_x_indirect = {
   execute:function(cpu, bytes) {
     cpu.cycle_count+=4;
 
-    if((cpu.r.d&0xff)!=0)
+    if((cpu.r.d&0xff)!==0)
       cpu.cycle_count++;
 
     if(cpu.p.e) {
@@ -3967,7 +3968,7 @@ var SBC_direct_page_indirect_long = {
   execute:function(cpu, bytes) {
     cpu.cycle_count+=4;
 
-    if((cpu.r.d&0xff)!=0)
+    if((cpu.r.d&0xff)!==0)
       cpu.cycle_count++;
 
     var memory_location = bytes[0] + cpu.r.d;
@@ -3975,7 +3976,7 @@ var SBC_direct_page_indirect_long = {
     var high_byte_loc = cpu.mmu.read_byte(memory_location+1);
     var bank_byte = cpu.mmu.read_byte(memory_location+2);
     var absolute_location = (high_byte_loc<<8) | low_byte_loc;
-    if(cpu.p.e|cpu.p.m) {
+    if(cpu.p.e||cpu.p.m) {
       SBC_const.execute(cpu, [cpu.mmu.read_byte_long(absolute_location,
                                                      bank_byte)]);
     } else {
@@ -3993,7 +3994,7 @@ var SBC_direct_page_indirect_long_indexed_y = {
   execute:function(cpu, bytes) {
     cpu.cycle_count+=4; 
 
-    if((cpu.r.d&0xff)!=0)
+    if((cpu.r.d&0xff)!==0)
       cpu.cycle_count++;
 
     var memory_location = bytes[0] + cpu.r.d;
@@ -4005,7 +4006,7 @@ var SBC_direct_page_indirect_long_indexed_y = {
       absolute_location &= 0xffff;
       bank_byte++;
     }
-    if(cpu.p.e|cpu.p.m) {
+    if(cpu.p.e||cpu.p.m) {
       SBC_const.execute(cpu, [cpu.mmu.read_byte_long(absolute_location,
                                                      bank_byte)]);
     } else {
@@ -4027,7 +4028,7 @@ var SBC_direct_page_indirect_indexed_y = {
   execute:function(cpu, bytes) {
     cpu.cycle_count+=3;
 
-    if((cpu.r.d&0xff)!=0)
+    if((cpu.r.d&0xff)!==0)
       cpu.cycle_count++;
 
     var memory_location = bytes[0] + cpu.r.d;
@@ -4037,10 +4038,10 @@ var SBC_direct_page_indirect_indexed_y = {
     var original_location = (high_byte_loc<<8) | low_byte_loc;
     var absolute_location = original_location + cpu.r.y;
    
-    if((original_location&0xff00)!=(absolute_location&0xff00))
+    if((original_location&0xff00)!==(absolute_location&0xff00))
       cpu.cycle_count++;
 
-    if(cpu.p.e|cpu.p.m) {
+    if(cpu.p.e||cpu.p.m) {
       SBC_const.execute(cpu, [cpu.mmu.read_byte(absolute_location)]);
     } else {
       var low_byte = cpu.mmu.read_byte(absolute_location);
@@ -4058,7 +4059,7 @@ var SBC_absolute_indexed_x = {
     var original_location = (bytes[1]<<8)|bytes[0];
     var memory_location = original_location+cpu.r.x;
 
-    if((original_location&0xff00)!=(memory_location&0xff00))
+    if((original_location&0xff00)!==(memory_location&0xff00))
       cpu.cycle_count++;
 
     var location_high_byte = memory_location >> 8;
@@ -4075,7 +4076,7 @@ var SBC_absolute_indexed_y = {
     var original_location = (bytes[1]<<8)|bytes[0];
     var memory_location = original_location+cpu.r.y;
 
-    if((original_location&0xff00)!=(memory_location&0xff00))
+    if((original_location&0xff00)!==(memory_location&0xff00))
       cpu.cycle_count++;
 
     var location_high_byte = memory_location >> 8;
@@ -4102,14 +4103,14 @@ var SBC_direct_page_indirect = {
   execute:function(cpu, bytes) {
     cpu.cycle_count+=3;
 
-    if((cpu.r.d&0xff)!=0)
+    if((cpu.r.d&0xff)!==0)
       cpu.cycle_count++;
 
     var memory_location = bytes[0] + cpu.r.d;
     var low_byte_loc = cpu.mmu.read_byte(memory_location);
     var high_byte_loc = cpu.mmu.read_byte(memory_location+1);
     var absolute_location = (high_byte_loc<<8) | low_byte_loc;
-    if(cpu.p.e|cpu.p.m) {
+    if(cpu.p.e||cpu.p.m) {
       SBC_const.execute(cpu, [cpu.mmu.read_byte(absolute_location)]);
     } else {
       var low_byte = cpu.mmu.read_byte(absolute_location);
@@ -4202,7 +4203,7 @@ var SBC_stack_relative_indirect_indexed_y = {
 
 var ADC_const = {
   bytes_required:function(cpu) {
-    if(cpu.p.e|cpu.p.m) {
+    if(cpu.p.e||cpu.p.m) {
       return 2;
     } else {
       return 3;
@@ -4210,7 +4211,7 @@ var ADC_const = {
   },
   execute:function(cpu, bytes) {
     var old_a = cpu.r.a; 
-    if(cpu.p.e|cpu.p.m) {
+    if(cpu.p.e||cpu.p.m) {
       cpu.cycle_count+=2;
 
       if(cpu.p.d) {
@@ -4323,7 +4324,7 @@ var ADC_absolute = {
   execute:function(cpu, bytes) {
     var memory_location = (bytes[1]<<8)|bytes[0];
     cpu.cycle_count+=2;
-    if(cpu.p.e|cpu.p.m) {
+    if(cpu.p.e||cpu.p.m) {
       ADC_const.execute(cpu, [cpu.mmu.read_byte(memory_location)]);
     } else {
       var low_byte = cpu.mmu.read_byte(memory_location);
@@ -4340,7 +4341,7 @@ var ADC_absolute_long = {
   execute:function(cpu, bytes) {
     var memory_location = (bytes[1]<<8)|bytes[0];
     cpu.cycle_count+=3;
-    if(cpu.p.e|cpu.p.m) {
+    if(cpu.p.e||cpu.p.m) {
       ADC_const.execute(cpu, [cpu.mmu.read_byte_long(memory_location, bytes[2])]);
     } else {
       var low_byte = cpu.mmu.read_byte_long(memory_location, bytes[2]);
@@ -4363,7 +4364,7 @@ var ADC_absolute_long_indexed_x = {
       memory_location &= 0xffff;
     }
 
-    if(cpu.p.e|cpu.p.m) {
+    if(cpu.p.e||cpu.p.m) {
       ADC_const.execute(cpu, [cpu.mmu.read_byte_long(memory_location, bytes[2])]);
     } else {
       var low_byte = cpu.mmu.read_byte_long(memory_location, bytes[2]);
@@ -4382,13 +4383,13 @@ var ADC_direct_page = {
     return 2;
   },
   execute:function(cpu, bytes) {
-    if((cpu.r.d&0x00ff)!=0)
+    if((cpu.r.d&0x00ff)!==0)
       cpu.cycle_count+=2;
     else 
       cpu.cycle_count++;
 
     var memory_location = bytes[0] + cpu.r.d;
-    if(cpu.p.e|cpu.p.m) {
+    if(cpu.p.e||cpu.p.m) {
       ADC_const.execute(cpu, [cpu.mmu.read_byte(memory_location)]);
     } else {
       var low_byte = cpu.mmu.read_byte(memory_location);
@@ -4403,7 +4404,7 @@ var ADC_direct_page_indirect = {
     return 2;
   },
   execute:function(cpu, bytes) {
-    if((cpu.r.d&0x00ff)!=0)
+    if((cpu.r.d&0x00ff)!==0)
       cpu.cycle_count+=4;
     else 
       cpu.cycle_count+=3;
@@ -4412,7 +4413,7 @@ var ADC_direct_page_indirect = {
     var low_byte_loc = cpu.mmu.read_byte(memory_location);
     var high_byte_loc = cpu.mmu.read_byte(memory_location+1);
     var absolute_location = (high_byte_loc<<8) | low_byte_loc;
-    if(cpu.p.e|cpu.p.m) {
+    if(cpu.p.e||cpu.p.m) {
       ADC_const.execute(cpu, [cpu.mmu.read_byte(absolute_location)]);
     } else {
       var low_byte = cpu.mmu.read_byte(absolute_location);
@@ -4427,7 +4428,7 @@ var ADC_direct_page_indexed_x_indirect = {
     return 2;
   },
   execute:function(cpu, bytes) {
-    if((cpu.r.d&0x00ff)!=0)
+    if((cpu.r.d&0x00ff)!==0)
       cpu.cycle_count+=5;
     else 
       cpu.cycle_count+=4;
@@ -4468,7 +4469,7 @@ var ADC_direct_page_indirect_long_indexed_y = {
     return 2;
   },
   execute:function(cpu, bytes) {
-    if((cpu.r.d&0x00ff)!=0)
+    if((cpu.r.d&0x00ff)!==0)
       cpu.cycle_count+=5;
     else 
       cpu.cycle_count+=4;
@@ -4483,7 +4484,7 @@ var ADC_direct_page_indirect_long_indexed_y = {
       absolute_location &= 0xffff;
       bank_byte++;
     }
-    if(cpu.p.e|cpu.p.m) {
+    if(cpu.p.e||cpu.p.m) {
       ADC_const.execute(cpu, [cpu.mmu.read_byte_long(absolute_location,
                                                      bank_byte)]);
     } else {
@@ -4504,7 +4505,7 @@ var ADC_direct_page_indirect_long = {
     return 2;
   },
   execute:function(cpu, bytes) {
-    if((cpu.r.d&0x00ff)!=0)
+    if((cpu.r.d&0x00ff)!==0)
       cpu.cycle_count+=5;
     else 
       cpu.cycle_count+=4;
@@ -4514,7 +4515,7 @@ var ADC_direct_page_indirect_long = {
     var high_byte_loc = cpu.mmu.read_byte(memory_location+1);
     var bank_byte = cpu.mmu.read_byte(memory_location+2);
     var absolute_location = (high_byte_loc<<8) | low_byte_loc;
-    if(cpu.p.e|cpu.p.m) {
+    if(cpu.p.e||cpu.p.m) {
       ADC_const.execute(cpu, [cpu.mmu.read_byte_long(absolute_location,
                                                      bank_byte)]);
     } else {
@@ -4530,7 +4531,7 @@ var ADC_direct_page_indirect_indexed_y = {
     return 2;
   },
   execute:function(cpu, bytes) {
-    if((cpu.r.d&0x00ff)!=0)
+    if((cpu.r.d&0x00ff)!==0)
       cpu.cycle_count+=4;
     else 
       cpu.cycle_count+=3;
@@ -4542,10 +4543,10 @@ var ADC_direct_page_indirect_indexed_y = {
     var absolute_location = initial_absolute_location + cpu.r.y;
 
     // Add 1 cycle if page boundary crossed
-    if((initial_absolute_location&0xff00)!=(absolute_location&0xff00))
+    if((initial_absolute_location&0xff00)!==(absolute_location&0xff00))
       cpu.cycle_count++;
 
-    if(cpu.p.e|cpu.p.m) {
+    if(cpu.p.e||cpu.p.m) {
       ADC_const.execute(cpu, [cpu.mmu.read_byte(absolute_location)]);
     } else {
       var low_byte = cpu.mmu.read_byte(absolute_location);
@@ -4564,7 +4565,7 @@ var ADC_absolute_indexed_x = {
     var memory_location = initial_location+cpu.r.x;
 
     // Add 1 cycle if page boundary crossed
-    if((memory_location&0xff00)!=(initial_location&0xff00))
+    if((memory_location&0xff00)!==(initial_location&0xff00))
       cpu.cycle_count+=3;
     else
       cpu.cycle_count+=2;
@@ -4584,7 +4585,7 @@ var ADC_absolute_indexed_y = {
     var memory_location = initial_location+cpu.r.y;
 
     // Add 1 cycle if page boundary crossed
-    if((memory_location&0xff00)!=(initial_location&0xff00))
+    if((memory_location&0xff00)!==(initial_location&0xff00))
       cpu.cycle_count+=3;
     else
       cpu.cycle_count+=2;
@@ -5026,8 +5027,8 @@ var TYA = {
   },
   execute:function(cpu) {
     cpu.cycle_count+=2;
-    if(cpu.p.e|cpu.p.m) {
-      if(cpu.p.e|cpu.p.x) {
+    if(cpu.p.e||cpu.p.m) {
+      if(cpu.p.e||cpu.p.x) {
         // 8-bit index register to 8-bit accumulator.
         cpu.r.a = cpu.r.y;    
       } else {
@@ -5055,8 +5056,8 @@ var TAY = {
   },
   execute:function(cpu) {
     cpu.cycle_count+=2;
-    if(cpu.p.e|cpu.p.m) {
-      if(cpu.p.e|cpu.p.x) {
+    if(cpu.p.e||cpu.p.m) {
+      if(cpu.p.e||cpu.p.x) {
         // 8-bit accumulator to 8-bit x index register.
         cpu.r.y = cpu.r.a; 
         cpu.p.n = cpu.r.y >> 7;
@@ -5092,8 +5093,8 @@ var TXA = {
   },
   execute:function(cpu) {
     cpu.cycle_count+=2;
-    if(cpu.p.e|cpu.p.m) {
-      if(cpu.p.e|cpu.p.x) {
+    if(cpu.p.e||cpu.p.m) {
+      if(cpu.p.e||cpu.p.x) {
         // 8-bit index register to 8-bit accumulator.
         cpu.r.a = cpu.r.x;    
       } else {
@@ -5121,8 +5122,8 @@ var TAX = {
   },
   execute:function(cpu) {
     cpu.cycle_count+=2;
-    if(cpu.p.e|cpu.p.m) {
-      if(cpu.p.e|cpu.p.x) {
+    if(cpu.p.e||cpu.p.m) {
+      if(cpu.p.e||cpu.p.x) {
         // 8-bit accumulator to 8-bit x index register.
         cpu.r.x = cpu.r.a; 
         cpu.p.n = cpu.r.x >> 7;
@@ -5164,7 +5165,7 @@ var TXY = {
       cpu.p.z = 0;
     }
 
-    if(cpu.p.e|cpu.p.x) {
+    if(cpu.p.e||cpu.p.x) {
       cpu.p.n = cpu.r.y >> 7;
     } else {
       cpu.p.n = cpu.r.y >> 15;
@@ -5185,7 +5186,7 @@ var TYX = {
       cpu.p.z = 0;
     }
     
-    if(cpu.p.e|cpu.p.x) {
+    if(cpu.p.e||cpu.p.x) {
       cpu.p.n = cpu.r.y >> 7;
     } else {
       cpu.p.n = cpu.r.y >> 15;
@@ -5201,7 +5202,7 @@ var TCD = {
     cpu.cycle_count+=2;
 
     // Transfers 16-bits regardless of setting.
-    if(cpu.p.e|cpu.p.m) {
+    if(cpu.p.e||cpu.p.m) {
       cpu.r.d = (cpu.r.b<<8)|cpu.r.a; 
     } else {
       cpu.r.d = cpu.r.a;
@@ -5225,7 +5226,7 @@ var TDC = {
     cpu.cycle_count+=2;
 
     // Transfers 16-bits regardless of setting.
-    if(cpu.p.e|cpu.p.m) {
+    if(cpu.p.e||cpu.p.m) {
       cpu.r.a = cpu.r.d & 0xff;
       cpu.r.b = cpu.r.d >> 8;
       cpu.p.n = cpu.r.b >> 7;
@@ -5249,7 +5250,7 @@ var TCS = {
   execute:function(cpu) {
     cpu.cycle_count+=2;
 
-    if(cpu.p.e|!cpu.p.m) {
+    if(cpu.p.e||!cpu.p.m) {
       cpu.r.s = cpu.r.a;
     } else {
       cpu.r.s = (cpu.r.b<<8)|cpu.r.a;
@@ -5298,7 +5299,7 @@ var STZ_absolute = {
     cpu.cycle_count+=4;
 
     var memory_location = (bytes[1]<<8)|bytes[0];
-    if(cpu.p.e|cpu.p.m) {
+    if(cpu.p.e||cpu.p.m) {
       cpu.mmu.store_byte(memory_location, 0);
     } else {
       cpu.cycle_count++;
@@ -5316,11 +5317,11 @@ var STZ_direct_page = {
   execute: function(cpu, bytes) {
     cpu.cycle_count+=3;
 
-    if((cpu.r.d&0xff)!=0)
+    if((cpu.r.d&0xff)!==0)
       cpu.cycle_count++;
 
     var memory_location = bytes[0]+cpu.r.d;
-    if(cpu.p.e|cpu.p.m) {
+    if(cpu.p.e||cpu.p.m) {
       cpu.mmu.store_byte(memory_location, 0);
     } else {
       cpu.cycle_count++;
@@ -5339,7 +5340,7 @@ var STZ_absolute_indexed_x = {
     cpu.cycle_count+=5;
 
     var memory_location = ((bytes[1]<<8)|bytes[0])+cpu.r.x;
-    if(cpu.p.e|cpu.p.m) {
+    if(cpu.p.e||cpu.p.m) {
       cpu.mmu.store_byte(memory_location, 0);
     } else {
       cpu.cycle_count++;
@@ -5357,11 +5358,11 @@ var STZ_direct_page_indexed_x = {
   execute: function(cpu, bytes) {
     cpu.cycle_count+=4;
 
-    if((cpu.r.d&0xff)!=0)
+    if((cpu.r.d&0xff)!==0)
       cpu.cycle_count++;
 
     var memory_location = bytes[0]+cpu.r.d+cpu.r.x;
-    if(cpu.p.e|cpu.p.m) {
+    if(cpu.p.e||cpu.p.m) {
       cpu.mmu.store_byte(memory_location, 0);
     } else {
       cpu.cycle_count++;
@@ -5390,11 +5391,11 @@ var STA_direct_page_indirect = {
   execute:function(cpu, bytes) {
     cpu.cycle_count+=5;
 
-    if((cpu.r.d&0xff)!=0)
+    if((cpu.r.d&0xff)!==0)
       cpu.cycle_count++;
 
     var memory_location = bytes[0] + cpu.r.d;
-    if(cpu.p.e|cpu.p.m) {
+    if(cpu.p.e||cpu.p.m) {
       var low_byte_loc = cpu.mmu.read_byte(memory_location);
       var high_byte_loc = cpu.mmu.read_byte(memory_location+1);
       cpu.mmu.store_byte((high_byte_loc<<8) | low_byte_loc, cpu.r.a); 
@@ -5419,11 +5420,11 @@ var STA_direct_page_indirect_long = {
   execute:function(cpu, bytes) {
     cpu.cycle_count+=6;
 
-    if((cpu.r.d&0xff)!=0)
+    if((cpu.r.d&0xff)!==0)
       cpu.cycle_count++;
 
     var memory_location = bytes[0] + cpu.r.d;
-    if(cpu.p.e|cpu.p.m) {
+    if(cpu.p.e||cpu.p.m) {
       var low_byte_loc = cpu.mmu.read_byte(memory_location);
       var high_byte_loc = cpu.mmu.read_byte(memory_location+1);
       var bank_byte = cpu.mmu.read_byte(memory_location+2);
@@ -5451,11 +5452,11 @@ var STA_direct_page_indirect_long_indexed_y = {
   execute:function(cpu, bytes) {
     cpu.cycle_count+=6;
 
-    if((cpu.r.d&0xff)!=0)
+    if((cpu.r.d&0xff)!==0)
       cpu.cycle_count++;
 
     var memory_location = bytes[0] + cpu.r.d;
-    if(cpu.p.e|cpu.p.m) {
+    if(cpu.p.e||cpu.p.m) {
       var low_byte_loc = cpu.mmu.read_byte(memory_location);
       var high_byte_loc = cpu.mmu.read_byte(memory_location+1);
       var bank_byte = cpu.mmu.read_byte(memory_location+2);
@@ -5495,11 +5496,11 @@ var STA_direct_page_indirect_indexed_y = {
   execute:function(cpu, bytes) {
     cpu.cycle_count+=6;
 
-    if((cpu.r.d&0xff)!=0)
+    if((cpu.r.d&0xff)!==0)
       cpu.cycle_count++;
 
     var memory_location = bytes[0] + cpu.r.d;
-    if(cpu.p.e|cpu.p.m) {
+    if(cpu.p.e||cpu.p.m) {
       var low_byte_loc = cpu.mmu.read_byte(memory_location);
       var high_byte_loc = cpu.mmu.read_byte(memory_location+1);
       cpu.mmu.store_byte((high_byte_loc<<8) | low_byte_loc, cpu.r.a); 
@@ -5612,11 +5613,11 @@ var LDA_direct_page_indirect = {
   execute:function(cpu, bytes) {
     cpu.cycle_count+=5;
 
-    if((cpu.r.d&0xff)!=0)
+    if((cpu.r.d&0xff)!==0)
       cpu.cycle_count++;
 
     var memory_location = bytes[0] + cpu.r.d;
-    if(cpu.p.e|cpu.p.m) {
+    if(cpu.p.e||cpu.p.m) {
       var low_byte_loc = cpu.mmu.read_byte(memory_location);
       var high_byte_loc = cpu.mmu.read_byte(memory_location+1);
       cpu.r.a = cpu.mmu.read_byte((high_byte_loc<<8) | low_byte_loc); 
@@ -5647,7 +5648,7 @@ var LDA_direct_page_indexed_x_indirect = {
   execute:function(cpu, bytes) {
     cpu.cycle_count+=6;
 
-    if((cpu.r.d&0xff)!=0)
+    if((cpu.r.d&0xff)!==0)
       cpu.cycle_count++;
 
     if(cpu.p.e) {
@@ -5696,11 +5697,11 @@ var LDA_direct_page_indirect_long = {
   execute:function(cpu, bytes) {
     cpu.cycle_count+=6;
 
-    if((cpu.r.d&0xff)!=0)
+    if((cpu.r.d&0xff)!==0)
       cpu.cycle_count++;
 
     var memory_location = bytes[0] + cpu.r.d;
-    if(cpu.p.e|cpu.p.m) {
+    if(cpu.p.e||cpu.p.m) {
       var low_byte_loc = cpu.mmu.read_byte(memory_location);
       var high_byte_loc = cpu.mmu.read_byte(memory_location+1);
       var bank_byte = cpu.mmu.read_byte(memory_location+2);
@@ -5734,11 +5735,11 @@ var LDA_direct_page_indirect_long_indexed_y = {
   execute:function(cpu, bytes) {
     cpu.cycle_count+=6;
 
-    if((cpu.r.d&0xff)!=0)
+    if((cpu.r.d&0xff)!==0)
       cpu.cycle_count++;
 
     var memory_location = bytes[0] + cpu.r.d;
-    if(cpu.p.e|cpu.p.m) {
+    if(cpu.p.e||cpu.p.m) {
       var low_byte_loc = cpu.mmu.read_byte(memory_location);
       var high_byte_loc = cpu.mmu.read_byte(memory_location+1);
       var bank_byte = cpu.mmu.read_byte(memory_location+2);
@@ -5783,17 +5784,17 @@ var LDA_direct_page_indirect_indexed_y = {
   execute:function(cpu, bytes) {
     cpu.cycle_count+=5;
 
-    if((cpu.r.d&0xff)!=0)
+    if((cpu.r.d&0xff)!==0)
       cpu.cycle_count++;
 
     var memory_location = bytes[0] + cpu.r.d;
-    if(cpu.p.e|cpu.p.m) {
+    if(cpu.p.e||cpu.p.m) {
       var low_byte_loc = cpu.mmu.read_byte(memory_location);
       var high_byte_loc = cpu.mmu.read_byte(memory_location+1);
       var original_location = (high_byte_loc<<8)|low_byte_loc;
       var absolute_location = original_location + cpu.r.y;
 
-      if((original_location&0xff00)!=(absolute_location&0xff00))
+      if((original_location&0xff00)!==(absolute_location&0xff00))
         cpu.cycle_count++;
 
       cpu.r.a = cpu.mmu.read_byte(absolute_location); 
@@ -5806,7 +5807,7 @@ var LDA_direct_page_indirect_indexed_y = {
       var original_location = (high_byte_loc<<8) | low_byte_loc;
       var absolute_location = original_location + cpu.r.y;
 
-      if((original_location&0xff00)!=(absolute_location&0xff00))
+      if((original_location&0xff00)!==(absolute_location&0xff00))
         cpu.cycle_count++;
 
       var low_byte = cpu.mmu.read_byte(absolute_location);
@@ -5829,11 +5830,11 @@ var LDA_direct_page_indexed_x = {
   execute:function(cpu, bytes) {
     cpu.cycle_count+=4;
 
-    if((cpu.r.d&0xff)!=0)
+    if((cpu.r.d&0xff)!==0)
       cpu.cycle_count++;
 
     var memory_location = bytes[0] + cpu.r.d + cpu.r.x; 
-    if(cpu.p.e|cpu.p.m) {
+    if(cpu.p.e||cpu.p.m) {
       cpu.r.a = cpu.mmu.read_byte(memory_location);
       cpu.p.n = cpu.r.a >> 7;
     } else {
@@ -5862,10 +5863,10 @@ var LDA_absolute_indexed_y = {
     var original_location = (bytes[1]<<8)|bytes[0];
     var memory_location = original_location+cpu.r.y;
 
-    if((original_location&0xff00)!=(memory_location&0xff00))
+    if((original_location&0xff00)!==(memory_location&0xff00))
       cpu.cycle_count++;
 
-    if(cpu.p.e|cpu.p.m) {
+    if(cpu.p.e||cpu.p.m) {
       cpu.r.a = cpu.mmu.read_byte(memory_location);
       cpu.p.n = cpu.r.a >> 7;
     } else {
@@ -5894,10 +5895,10 @@ var LDA_absolute_indexed_x = {
     var original_location = (bytes[1]<<8)|bytes[0];
     var memory_location = original_location+cpu.r.x;
 
-    if((original_location&0xff00)!=(memory_location&0xff00))
+    if((original_location&0xff00)!==(memory_location&0xff00))
       cpu.cycle_count++;
 
-    if(cpu.p.e|cpu.p.m) {
+    if(cpu.p.e||cpu.p.m) {
       cpu.r.a = cpu.mmu.read_byte(memory_location);
       cpu.p.n = cpu.r.a >> 7;
     } else {
@@ -6011,7 +6012,7 @@ var NOP = {
 
 var LDY_const = {
   bytes_required:function(cpu) {
-    if(cpu.p.e|cpu.p.x)
+    if(cpu.p.e||cpu.p.x)
       return 2;
     else
       return 3;
@@ -6019,7 +6020,7 @@ var LDY_const = {
   execute:function(cpu, bytes) {
     cpu.cycle_count+=2;
 
-    if(cpu.p.e|cpu.p.x) {
+    if(cpu.p.e||cpu.p.x) {
       cpu.r.y = bytes[0]; 
       cpu.p.n = cpu.r.y >> 7;
     } else {
@@ -6046,10 +6047,10 @@ var LDY_absolute_indexed_x = {
     var original_location = (bytes[1]<<8)|bytes[0];
     var memory_location = original_location + cpu.r.x;
 
-    if((original_location&0xff00)!=(memory_location&0xff00))
+    if((original_location&0xff00)!==(memory_location&0xff00))
       cpu.cycle_count++;
 
-    if(cpu.p.e|cpu.p.x) {
+    if(cpu.p.e||cpu.p.x) {
       cpu.r.y = cpu.mmu.read_byte(memory_location);
       cpu.p.n = cpu.r.y >> 7;
     } else {
@@ -6075,11 +6076,11 @@ var LDY_direct_page_indexed_x = {
   execute:function(cpu, bytes) {
     cpu.cycle_count+=4;
 
-    if((cpu.r.d&0xff)!=0)
+    if((cpu.r.d&0xff)!==0)
       cpu.cycle_count++;
 
     var memory_location = bytes[0] + cpu.r.d + cpu.r.x; 
-    if(cpu.p.e|cpu.p.x) {
+    if(cpu.p.e||cpu.p.x) {
       cpu.r.y = cpu.mmu.read_byte(memory_location);
       cpu.p.n = cpu.r.y >> 7;
     } else {
@@ -6106,7 +6107,7 @@ var LDY_absolute = {
     cpu.cycle_count+=4;
 
     var memory_location = (bytes[1]<<8)|bytes[0];
-    if(cpu.p.e|cpu.p.x) {
+    if(cpu.p.e||cpu.p.x) {
       cpu.r.y = cpu.mmu.read_byte(memory_location);
       cpu.p.n = cpu.r.y >> 7;
     } else {
@@ -6132,11 +6133,11 @@ var LDY_direct_page = {
   execute:function(cpu, bytes) {
     cpu.cycle_count+=3;
 
-    if((cpu.r.d&0xff)!=0)
+    if((cpu.r.d&0xff)!==0)
       cpu.cycle_count++;
 
     var memory_location = bytes[0] + cpu.r.d;
-    if(cpu.p.e|cpu.p.x) {
+    if(cpu.p.e||cpu.p.x) {
       cpu.r.y = cpu.mmu.read_byte(memory_location);
       cpu.p.n = cpu.r.y >> 7;
     } else {
@@ -6163,7 +6164,7 @@ var DEX = {
     cpu.cycle_count+=2;
 
     if(cpu.r.x===0) {
-      if(cpu.p.e|cpu.p.x) {
+      if(cpu.p.e||cpu.p.x) {
         cpu.r.x = 0xff;
       } else {
         cpu.r.x = 0xffff;
@@ -6172,7 +6173,7 @@ var DEX = {
       cpu.p.z = 0; 
     } else {
       cpu.r.x--;
-      if(cpu.p.e|cpu.p.x) {
+      if(cpu.p.e||cpu.p.x) {
         cpu.p.n = cpu.r.x >> 7;
       } else {
         cpu.p.n = cpu.r.x >> 15;
@@ -6195,7 +6196,7 @@ var DEY = {
     cpu.cycle_count+=2;
 
     if(cpu.r.y===0) {
-      if(cpu.p.e|cpu.p.x) {
+      if(cpu.p.e||cpu.p.x) {
         cpu.r.y = 0xff;
       } else {
         cpu.r.y = 0xffff; 
@@ -6205,7 +6206,7 @@ var DEY = {
     } else {
       cpu.r.y--;
 
-      if(cpu.p.e|cpu.p.x) {
+      if(cpu.p.e||cpu.p.x) {
         cpu.p.n = cpu.r.y >> 7;
       } else {
         cpu.p.n = cpu.r.y >> 15;
@@ -6228,7 +6229,7 @@ var DEC_accumulator = {
     cpu.cycle_count+=2;
 
     if(cpu.r.a===0) {
-      if(cpu.p.e|cpu.p.m) {
+      if(cpu.p.e||cpu.p.m) {
         cpu.r.a = 0xff;
       } else {
         cpu.r.a = 0xffff;
@@ -6237,7 +6238,7 @@ var DEC_accumulator = {
       cpu.p.z = 0;
     } else {
       cpu.r.a--; 
-      if(cpu.p.e|cpu.p.m) {
+      if(cpu.p.e||cpu.p.m) {
         cpu.r.a &= 0xff;   
         cpu.p.n = cpu.r.a >> 7;
       } else {
@@ -6263,7 +6264,7 @@ var DEC_absolute = {
 
     var memory_location = (bytes[1]<<8)|bytes[0];
     var temp;
-    if(cpu.p.e|cpu.p.m) {
+    if(cpu.p.e||cpu.p.m) {
       temp = cpu.mmu.read_byte(memory_location);
       if(temp===0) {
         cpu.mmu.store_byte(memory_location, 0xff);
@@ -6315,7 +6316,7 @@ var DEC_absolute_indexed_x = {
 
     var memory_location = ((bytes[1]<<8)|bytes[0]) + cpu.r.x;
     var temp;
-    if(cpu.p.e|cpu.p.m) {
+    if(cpu.p.e||cpu.p.m) {
       temp = cpu.mmu.read_byte(memory_location);
       if(temp===0) {
         cpu.mmu.store_byte(memory_location, 0xff);
@@ -6365,12 +6366,12 @@ var DEC_direct_page = {
   execute: function(cpu, bytes) {
     cpu.cycle_count+=5;
 
-    if((cpu.r.d&0xff)!=0)
+    if((cpu.r.d&0xff)!==0)
       cpu.cycle_count++;
 
     var memory_location = bytes[0] + cpu.r.d;
     var temp;
-    if(cpu.p.e|cpu.p.m) {
+    if(cpu.p.e||cpu.p.m) {
       temp = cpu.mmu.read_byte(memory_location);
       if(temp===0) {
         cpu.mmu.store_byte(memory_location, 0xff);
@@ -6420,12 +6421,12 @@ var DEC_direct_page_indexed_x = {
   execute: function(cpu, bytes) {
     cpu.cycle_count+=6;
 
-    if((cpu.r.d&0xff)!=0)
+    if((cpu.r.d&0xff)!==0)
       cpu.cycle_count++;
 
     var memory_location = bytes[0] + cpu.r.d + cpu.r.x;
     var temp;
-    if(cpu.p.e|cpu.p.m) {
+    if(cpu.p.e||cpu.p.m) {
       temp = cpu.mmu.read_byte(memory_location);
       if(temp===0) {
         cpu.mmu.store_byte(memory_location, 0xff);
@@ -6477,7 +6478,7 @@ var INX = {
 
     cpu.r.x++;
     
-    if(cpu.p.e|cpu.p.x) {
+    if(cpu.p.e||cpu.p.x) {
       cpu.r.x &= 0xff;
       cpu.p.n = cpu.r.x >> 7;
     } else {
@@ -6502,7 +6503,7 @@ var INY = {
 
     cpu.r.y++;
 
-    if(cpu.p.e|cpu.p.x) {
+    if(cpu.p.e||cpu.p.x) {
       cpu.r.y &= 0xff;
       cpu.p.n = cpu.r.y >> 7;
     } else {
@@ -6527,7 +6528,7 @@ var INC_accumulator = {
 
     cpu.r.a++; 
 
-    if(cpu.p.e|cpu.p.m) {
+    if(cpu.p.e||cpu.p.m) {
       cpu.r.a &= 0xff;
       cpu.p.n = cpu.r.a >> 7;
     } else {
@@ -6552,7 +6553,7 @@ var INC_absolute = {
 
     var memory_location = (bytes[1]<<8)|bytes[0]
     var temp;
-    if(cpu.p.e|cpu.p.m) {
+    if(cpu.p.e||cpu.p.m) {
       temp = cpu.mmu.read_byte(memory_location) + 1; 
       temp &= 0xff;
       cpu.p.n = temp >> 7;
@@ -6592,7 +6593,7 @@ var INC_absolute_indexed_x = {
 
     var memory_location = ((bytes[1]<<8)|bytes[0]) + cpu.r.x;
     var temp;
-    if(cpu.p.e|cpu.p.m) {
+    if(cpu.p.e||cpu.p.m) {
       temp = cpu.mmu.read_byte(memory_location) + 1; 
       temp &= 0xff;
       cpu.p.n = temp >> 7;
@@ -6630,12 +6631,12 @@ var INC_direct_page = {
   execute: function(cpu, bytes) {
     cpu.cycle_count+=5;
 
-    if((cpu.r.d&0xff)!=0)
+    if((cpu.r.d&0xff)!==0)
       cpu.cycle_count++;
 
     var memory_location = bytes[0] + cpu.r.d;
     var temp;
-    if(cpu.p.e|cpu.p.m) {
+    if(cpu.p.e||cpu.p.m) {
       temp = cpu.mmu.read_byte(memory_location) + 1; 
       temp &= 0xff;
       cpu.mmu.store_byte(memory_location, temp);
@@ -6673,12 +6674,12 @@ var INC_direct_page_indexed_x = {
   execute: function(cpu, bytes) {
     cpu.cycle_count+=6;
 
-    if((cpu.r.d&0xff)!=0)
+    if((cpu.r.d&0xff)!==0)
       cpu.cycle_count++;    
 
     var memory_location = bytes[0] + cpu.r.d + cpu.r.x;
     var temp;
-    if(cpu.p.e|cpu.p.m) {
+    if(cpu.p.e||cpu.p.m) {
       temp = cpu.mmu.read_byte(memory_location) + 1; 
       temp &= 0xff;
       cpu.mmu.store_byte(memory_location, temp);
@@ -6716,11 +6717,11 @@ var STA_direct_page_indexed_x = {
   execute: function(cpu, bytes) {
     cpu.cycle_count+=4;
 
-    if((cpu.r.d&0xff)!=0)
+    if((cpu.r.d&0xff)!==0)
       cpu.cycle_count++;
 
     var memory_location = bytes[0]+cpu.p.d+cpu.r.x;
-    if(cpu.p.e|cpu.p.m) {
+    if(cpu.p.e||cpu.p.m) {
       cpu.mmu.store_byte(memory_location, cpu.r.a);
     } else {
       cpu.cycle_count++;
@@ -6740,7 +6741,7 @@ var STA_direct_page_indexed_x_indirect = {
   execute:function(cpu, bytes) {
     cpu.cycle_count+=6;
 
-    if((cpu.r.d&0xff)!=0)
+    if((cpu.r.d&0xff)!==0)
       cpu.cycle_count++;
 
     if(cpu.p.e) {
@@ -6789,11 +6790,11 @@ var STA_direct_page = {
   execute: function(cpu, bytes) {
     cpu.cycle_count+=3;
 
-    if((cpu.r.d&0xff)!=0)
+    if((cpu.r.d&0xff)!==0)
       cpu.cycle_count++;
 
     var memory_location = bytes[0]+cpu.p.d;
-    if(cpu.p.e|cpu.p.m) {
+    if(cpu.p.e||cpu.p.m) {
       cpu.mmu.store_byte(memory_location, cpu.r.a);
     } else {
       cpu.cycle_count++;
@@ -6814,7 +6815,7 @@ var STA_absolute_indexed_x = {
     cpu.cycle_count+=5;
 
     var memory_location = ((bytes[1]<<8)|bytes[0])+cpu.r.x;
-    if(cpu.p.e|cpu.p.m) {
+    if(cpu.p.e||cpu.p.m) {
       cpu.mmu.store_byte(memory_location, cpu.r.a);
     } else {
       cpu.cycle_count++;
@@ -6835,7 +6836,7 @@ var STA_absolute_indexed_y = {
     cpu.cycle_count+=5;
 
     var memory_location = ((bytes[1]<<8)|bytes[0])+cpu.r.y;
-    if(cpu.p.e|cpu.p.m) {
+    if(cpu.p.e||cpu.p.m) {
       cpu.mmu.store_byte(memory_location, cpu.r.a);
     } else {
       cpu.cycle_count++;
@@ -6855,11 +6856,11 @@ var STY_direct_page_indexed_x = {
   execute: function(cpu, bytes) {
     cpu.cycle_count+=4;
 
-    if((cpu.r.d&0xff)!=0)
+    if((cpu.r.d&0xff)!==0)
       cpu.cycle_count++;
 
     var memory_location = bytes[0]+cpu.p.d+cpu.r.x;
-    if(cpu.p.e|cpu.p.x) {
+    if(cpu.p.e||cpu.p.x) {
       cpu.mmu.store_byte(memory_location, cpu.r.y);
     } else {
       cpu.cycle_count++;
@@ -6879,11 +6880,11 @@ var STY_direct_page = {
   execute: function(cpu, bytes) {
     cpu.cycle_count+=3;
 
-    if((cpu.r.d&0xff)!=0)
+    if((cpu.r.d&0xff)!==0)
       cpu.cycle_count++;
 
     var memory_location = bytes[0]+cpu.p.d;
-    if(cpu.p.e|cpu.p.x) {
+    if(cpu.p.e||cpu.p.x) {
       cpu.mmu.store_byte(memory_location, cpu.r.y);
     } else {
       cpu.cycle_count++;
@@ -6904,7 +6905,7 @@ var STY_absolute = {
     cpu.cycle_count+=4;
 
     var memory_location = (bytes[1]<<8)|bytes[0];
-    if(cpu.p.e|cpu.p.x) {
+    if(cpu.p.e||cpu.p.x) {
       cpu.mmu.store_byte(memory_location, cpu.r.y);
     } else {
       cpu.cycle_count++;
@@ -6924,11 +6925,11 @@ var STX_direct_page_indexed_y = {
   execute: function(cpu, bytes) {
     cpu.cycle_count+=4;
 
-    if((cpu.r.d&0xff)!=0)
+    if((cpu.r.d&0xff)!==0)
       cpu.cycle_count++;
 
     var memory_location = bytes[0]+cpu.p.d+cpu.r.y;
-    if(cpu.p.e|cpu.p.x) {
+    if(cpu.p.e||cpu.p.x) {
       cpu.mmu.store_byte(memory_location, cpu.r.x);
     } else {
       cpu.cycle_count++;
@@ -6948,11 +6949,11 @@ var STX_direct_page = {
   execute: function(cpu, bytes) {
     cpu.cycle_count+=3;
 
-    if((cpu.r.d&0xff)!=0)
+    if((cpu.r.d&0xff)!==0)
       cpu.cycle_count++;
 
     var memory_location = bytes[0]+cpu.p.d;
-    if(cpu.p.e|cpu.p.x) {
+    if(cpu.p.e||cpu.p.x) {
       cpu.mmu.store_byte(memory_location, cpu.r.x);
     } else {
       cpu.cycle_count++;
@@ -6973,7 +6974,7 @@ var STX_absolute = {
     cpu.cycle_count+=4;
 
     var memory_location = (bytes[1]<<8)|bytes[0];
-    if(cpu.p.e|cpu.p.x) {
+    if(cpu.p.e||cpu.p.x) {
       cpu.mmu.store_byte(memory_location, cpu.r.x);
     } else {
       cpu.cycle_count++;
@@ -6994,7 +6995,7 @@ var STA_absolute_long = {
     cpu.cycle_count+=5;
 
     var memory_location = (bytes[1]<<8)|bytes[0];
-    if(cpu.p.e|cpu.p.m) {
+    if(cpu.p.e||cpu.p.m) {
       cpu.mmu.store_byte_long(memory_location, bytes[2], cpu.r.a);
     } else {
       cpu.cycle_count++;
@@ -7019,7 +7020,7 @@ var STA_absolute_long_indexed_x = {
       memory_location &= 0xffff;
       bytes[2]++;
     }
-    if(cpu.p.e|cpu.p.m) {
+    if(cpu.p.e||cpu.p.m) {
       cpu.mmu.store_byte_long(memory_location, bytes[2], cpu.r.a);
     } else {
       cpu.cycle_count++;
@@ -7044,7 +7045,7 @@ var STA_absolute = {
     cpu.cycle_count+=4;
 
     var memory_location = (bytes[1]<<8)|bytes[0];
-    if(cpu.p.e|cpu.p.m) {
+    if(cpu.p.e||cpu.p.m) {
       cpu.mmu.store_byte(memory_location, cpu.r.a);
     } else {
       cpu.cycle_count++;
@@ -7064,11 +7065,11 @@ var LDX_direct_page = {
   execute: function(cpu, bytes) {
     cpu.cycle_count+=3;
 
-    if((cpu.r.d&0xff)!=0)
+    if((cpu.r.d&0xff)!==0)
       cpu.cycle_count++;
 
     var memory_location = cpu.r.d + bytes[0];
-    if(cpu.p.e|cpu.p.x) {
+    if(cpu.p.e||cpu.p.x) {
       cpu.r.x = cpu.mmu.read_byte(memory_location);
       cpu.p.n = cpu.r.x >> 7;
     } else {
@@ -7094,11 +7095,11 @@ var LDX_direct_page_indexed_y = {
   execute: function(cpu, bytes) {
     cpu.cycle_count+=4;
 
-    if((cpu.r.d&0xff)!=0)
+    if((cpu.r.d&0xff)!==0)
       cpu.cycle_count++;
 
     var memory_location = cpu.r.d + bytes[0] + cpu.r.y;
-    if(cpu.p.e|cpu.p.x) {
+    if(cpu.p.e||cpu.p.x) {
       cpu.r.x = cpu.mmu.read_byte(memory_location);       
       cpu.p.n = cpu.r.x >> 7;
     } else {
@@ -7125,11 +7126,11 @@ var LDA_direct_page = {
   execute: function(cpu, bytes) {
     cpu.cycle_count+=3;
 
-    if((cpu.r.d&0xff)!=0)
+    if((cpu.r.d&0xff)!==0)
       cpu.cycle_count++; 
 
     var memory_location = bytes[0] + cpu.r.d; 
-    if(cpu.p.e|cpu.p.m) {
+    if(cpu.p.e||cpu.p.m) {
       cpu.r.a = cpu.mmu.read_byte(memory_location);
       cpu.p.n = cpu.r.a >> 7;
     } else {
@@ -7158,10 +7159,10 @@ var LDX_absolute_indexed_y = {
     var original_location = (bytes[1]<<8)|bytes[0];
     var memory_location = original_location+cpu.r.y;
 
-    if((original_location&0xff00)!=(memory_location&0xff00))
+    if((original_location&0xff00)!==(memory_location&0xff00))
       cpu.cycle_count++;
 
-    if(cpu.p.e|cpu.p.x) {
+    if(cpu.p.e||cpu.p.x) {
       cpu.r.x = cpu.mmu.read_byte(memory_location);
       cpu.p.n = cpu.r.x >> 7;
     } else {
@@ -7188,7 +7189,7 @@ var LDX_absolute = {
     cpu.cycle_count+=4;
 
     var memory_location = (bytes[1]<<8)|bytes[0];
-    if(cpu.p.e|cpu.p.x) {
+    if(cpu.p.e||cpu.p.x) {
       cpu.r.x = cpu.mmu.read_byte(memory_location);
       cpu.p.n = cpu.r.x >> 7;
     } else {
@@ -7215,7 +7216,7 @@ var LDA_absolute_long = {
     cpu.cyclce_count+=5;
 
     var memory_location = (bytes[1]<<8)|bytes[0];
-    if(cpu.p.e|cpu.p.m) {
+    if(cpu.p.e||cpu.p.m) {
       cpu.r.a = cpu.mmu.read_byte_long(memory_location, bytes[2]);
       cpu.p.n = cpu.r.a >> 7;
     } else {
@@ -7247,7 +7248,7 @@ var LDA_absolute_long_indexed_x = {
       memory_location &= 0xffff;      
     }
 
-    if(cpu.p.e|cpu.p.m) {
+    if(cpu.p.e||cpu.p.m) {
       cpu.r.a = cpu.mmu.read_byte_long(memory_location, bytes[2]);
       cpu.p.n = cpu.r.a >> 7;
     } else {
@@ -7279,7 +7280,7 @@ var LDA_absolute = {
     cpu.cycle_count+=4;
 
     var memory_location = (bytes[1]<<8)|bytes[0];
-    if(cpu.p.e|cpu.p.m) {
+    if(cpu.p.e||cpu.p.m) {
       cpu.r.a = cpu.mmu.read_byte(memory_location);
       cpu.p.n = cpu.r.a >> 7;
     } else {
@@ -7300,7 +7301,7 @@ var LDA_absolute = {
 
 var LDA_const = {
   bytes_required: function(cpu) {
-    if(cpu.p.e|cpu.p.m) {
+    if(cpu.p.e||cpu.p.m) {
       return 2;
     } else {
       return 3;
@@ -7309,7 +7310,7 @@ var LDA_const = {
   execute: function(cpu, bytes) {
     cpu.cycle_count+=2;
 
-    if(cpu.p.e|cpu.p.m) {
+    if(cpu.p.e||cpu.p.m) {
       cpu.r.a = bytes[0];  
       cpu.p.n = cpu.r.a >> 7;
     } else {
@@ -7328,7 +7329,7 @@ var LDA_const = {
 
 var LDX_const = {
   bytes_required: function(cpu) { 
-    if(cpu.p.e|cpu.p.x) { 
+    if(cpu.p.e||cpu.p.x) { 
       return 2; 
     } else { 
       return 3;
@@ -7338,7 +7339,7 @@ var LDX_const = {
     cpu.cycle_count+=2;
 
     var constant;
-    if(cpu.p.e|cpu.p.x) {
+    if(cpu.p.e||cpu.p.x) {
       cpu.r.x = bytes[0];  
       cpu.p.n = cpu.r.x >> 7;
     } else {
@@ -7508,7 +7509,7 @@ var XBA = {
   execute:function(cpu) {
     cpu.cycle_count+=3;
 
-    if(cpu.p.e|cpu.p.m) {
+    if(cpu.p.e||cpu.p.m) {
       cpu.cycle_count+=2;
       var old_a = cpu.r.a;
       cpu.r.a = cpu.r.b;
