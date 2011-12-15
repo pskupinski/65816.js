@@ -14,7 +14,9 @@
  * OR IN CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
  */
 
-function CPU_65816() {
+(function(window) {
+
+window.CPU_65816 = function() {
   // Registers
   this.r = {
     a:0,     // Accumulator
@@ -7535,3 +7537,5 @@ var XBA = {
     }
   }
 };
+
+})(window);
