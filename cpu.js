@@ -15,523 +15,6 @@
  */
 
 (function(window) {
-
-window.CPU_65816 = function() {
-  // Registers
-  this.r = {
-    a:0,     // Accumulator
-    b:0,     // "Hidden" Accumulator Register(high byte in 8-bit mode)
-    x:0,     // X Index Register
-    y:0,     // Y Index Register
-    d:0,     // Direct Page Register
-    s:0xff,  // Stack Pointer
-    pc:0,    // Program Counter
-    dbr:0,   // Data Bank Register
-    k:0      // Program Bank Register
-  };
-
-  // P register flags. 
-  this.p = {
-    e:1, // Emulator                  (0 = native mode)
-    c:0, // Carry                     (1 = carry)
-    z:0, // Zero                      (1 = zero)
-    i:0, // IRQ Disable               (1 = disabled)
-    d:0, // Decimal Mode              (1 = decimal, 0 = binary)
-    x:0, // Index Register Select     (1 = 8-bit, 0 = 16-bit)
-    m:0, // Memory/Accumulator Select (1 = 8-bit, 0 = 16-bit)
-    v:0, // Overflow                  (1 = overflow)
-    n:0  // Negative                  (1 = negative)
-  };
-
-  this.INTERRUPT = { NO_INTERRUPT: 0, NMI: 1, RESET: 2, ABORT: 3, COP: 4, 
-                     IRQ: 5, BRK: 6 };
-
-  this.interrupt = this.INTERRUPT.NO_INTERRUPT;
-
-  // This is used to keep the cpu going if started with start().
-  this.executing = false;
-
-  // This is set by the WAI operation to stop execution until an interrupt
-  // is received.
-  this.waiting = false;
-
-  // This is set by the STP operation to stop execution until a RESET
-  // interrupt is received.
-  this.stopped = false;
-
-  this.raise_interrupt = function(i) {
-    if(this.waiting) {
-      this.waiting = false;
-      if(this.p.i) {
-        if(i===this.INTERRUPT.IRQ) {
-          i = this.INTERRUPT.NO_INTERRUPT;
-        } 
-      }
-      this.interrupt = i;
-      this.start(); 
-    } else if(this.stopped&&(i===this.INTERRUPT.RESET)) {
-      this.stopped = false;
-      this.start();   
-    } else {
-      this.interrupt = i;
-    }
-  };
-
-  this.cycle_count = 0;
-
-  this.mmu = new MMU();
-  this.mmu.cpu = this; 
-
-  this.opcode_map = { 0xfb : XCE, 0x18 : CLC, 0x78 : SEI, 0x38 : SEC,
-                      0x58 : CLI, 0xc2 : REP, 0xe2 : SEP, 0xd8 : CLD,
-                      0xf8 : SED, 0xb8 : CLV, 0xeb : XBA, 0xa9 : LDA_const, 
-                      0xad : LDA_absolute, 0xaf : LDA_absolute_long, 
-                      0xbf : LDA_absolute_long_indexed_x,
-                      0xa5 : LDA_direct_page, 0xbd : LDA_absolute_indexed_x,
-                      0xb5 : LDA_direct_page_indexed_x,
-                      0xb9 : LDA_absolute_indexed_y,
-                      0xa1 : LDA_direct_page_indexed_x_indirect,
-                      0xb2 : LDA_direct_page_indirect,
-                      0xa7 : LDA_direct_page_indirect_long,
-                      0xb7 : LDA_direct_page_indirect_long_indexed_y,
-                      0xb1 : LDA_direct_page_indirect_indexed_y,
-                      0xa3 : LDA_stack_relative,
-                      0xb3 : LDA_stack_relative_indirect_indexed_y,
-                      0xa2 : LDX_const, 
-                      0xae : LDX_absolute, 0xa6 : LDX_direct_page,
-                      0xa0 : LDY_const, 0xbc : LDY_absolute_indexed_x,
-                      0xb4 : LDY_direct_page_indexed_x,
-                      0xbe : LDX_absolute_indexed_y,
-                      0xb6 : LDX_direct_page_indexed_y,
-                      0xac : LDY_absolute, 0xa4 : LDY_direct_page, 0xea : NOP,
-                      0x8d : STA_absolute, 0x85 : STA_direct_page,
-                      0x8f : STA_absolute_long, 
-                      0x9f : STA_absolute_long_indexed_x,
-                      0x81 : STA_direct_page_indexed_x_indirect,
-                      0x92 : STA_direct_page_indirect,
-                      0x87 : STA_direct_page_indirect_long,
-                      0x97 : STA_direct_page_indirect_long_indexed_y,
-                      0x91 : STA_direct_page_indirect_indexed_y,
-                      0x9d : STA_absolute_indexed_x, 
-                      0x99 : STA_absolute_indexed_y,
-                      0x95 : STA_direct_page_indexed_x, 
-                      0x83 : STA_stack_relative,
-                      0x93 : STA_stack_relative_indirect_indexed_y,
-                      0x8e : STX_absolute, 0x86 : STX_direct_page,
-                      0x96 : STX_direct_page_indexed_y,
-                      0x8c : STY_absolute, 0x84 : STY_direct_page,
-                      0x94 : STY_direct_page_indexed_x,
-                      0x1a : INC_accumulator, 0xe6 : INC_direct_page,
-                      0xee : INC_absolute, 0xf6 : INC_direct_page_indexed_x,
-                      0xfe : INC_absolute_indexed_x,
-                      0xe8 : INX, 0xc8 : INY,
-                      0x3a : DEC_accumulator, 0xce : DEC_absolute, 
-                      0xde : DEC_absolute_indexed_x,
-                      0xc6 : DEC_direct_page, 0xca : DEX, 0x88 : DEY,
-                      0xd6 : DEC_direct_page_indexed_x,
-                      0x9c : STZ_absolute, 0x64 : STZ_direct_page,
-                      0x9e : STZ_absolute_indexed_x,
-                      0x74 : STZ_direct_page_indexed_x, 0x9b : TXY,
-                      0xbb : TYX, 0xaa : TAX, 0xa8 : TAY, 0x8a : TXA, 
-                      0x98 : TYA, 0x5b : TCD, 0x7b : TDC, 0x1b : TCS,
-                      0x3b : TSC, 0x4c : JMP_absolute, 
-                      0x5c : JMP_absolute_long, 
-                      0xdc : JMP_absolute_indirect_long,
-                      0x7c : JMP_absolute_indexed_x_indirect,
-                      0x6c : JMP_absolute_indirect, 0x80 : BRA, 0x82 : BRL,
-                      0xf0 : BEQ, 0xd0 : BNE, 0x90 : BCC, 0xb0 : BCS,
-                      0x50 : BVC, 0x70 : BVS, 0x10 : BPL, 0x30 : BMI,
-                      0x69 : ADC_const, 0x6d : ADC_absolute, 
-                      0x61 : ADC_direct_page_indexed_x_indirect,
-                      0x6f : ADC_absolute_long,
-                      0x7f : ADC_absolute_long_indexed_x,
-                      0x65 : ADC_direct_page, 0x72 : ADC_direct_page_indirect,
-                      0x67 : ADC_direct_page_indirect_long,
-                      0x77 : ADC_direct_page_indirect_long_indexed_y,
-                      0x71 : ADC_direct_page_indirect_indexed_y,
-                      0x7d : ADC_absolute_indexed_x, 
-                      0x79 : ADC_absolute_indexed_y,
-                      0x75 : ADC_direct_page_indexed_x, 
-                      0x63 : ADC_stack_relative, 
-                      0x73 : ADC_stack_relative_indirect_indexed_y, 
-                      0xe9 : SBC_const,
-                      0xed : SBC_absolute, 0xe5 : SBC_direct_page,
-                      0xef : SBC_absolute_long,
-                      0xff : SBC_absolute_long_indexed_x,
-                      0xf2 : SBC_direct_page_indirect, 
-                      0xe1 : SBC_direct_page_indexed_x_indirect,
-                      0xe7 : SBC_direct_page_indirect_long,
-                      0xf7 : SBC_direct_page_indirect_long_indexed_y,
-                      0xf1 : SBC_direct_page_indirect_indexed_y,
-                      0xfd : SBC_absolute_indexed_x, 
-                      0xf9 : SBC_absolute_indexed_y,
-                      0xf5 : SBC_direct_page_indexed_x,
-                      0xe3 : SBC_stack_relative,
-                      0xf3 : SBC_stack_relative_indirect_indexed_y,
-                      0xc9 : CMP_const, 0xc5 : CMP_direct_page,
-                      0xcd : CMP_absolute, 0xd2 : CMP_direct_page_indirect,
-                      0xcf : CMP_absolute_long,
-                      0xdf : CMP_absolute_long_indexed_x,
-                      0xc7 : CMP_direct_page_indirect_long,
-                      0xd7 : CMP_direct_page_indirect_long_indexed_y,
-                      0xd5 : CMP_direct_page_indexed_x,
-                      0xc1 : CMP_direct_page_indexed_x_indirect,
-                      0xdd : CMP_absolute_indexed_x,
-                      0xd9 : CMP_absolute_indexed_y,
-                      0xd1 : CMP_direct_page_indirect_indexed_y, 
-                      0xc3 : CMP_stack_relative,
-                      0xd3 : CMP_stack_relative_indirect_indexed_y,
-                      0xe0 : CPX_const, 
-                      0xec : CPX_absolute, 0xe4 : CPX_direct_page, 
-                      0xc0 : CPY_const, 0xcc : CPY_absolute,
-                      0xc4 : CPY_direct_page, 0x29 : AND_const,
-                      0x2d : AND_absolute, 0x25 : AND_direct_page,
-                      0x2f : AND_absolute_long,
-                      0x3f : AND_absolute_long_indexed_x,
-                      0x21 : AND_direct_page_indexed_x_indirect,
-                      0x32 : AND_direct_page_indirect,
-                      0x27 : AND_direct_page_indirect_long,
-                      0x37 : AND_direct_page_indirect_long_indexed_y,
-                      0x31 : AND_direct_page_indirect_indexed_y,
-                      0x3d : AND_absolute_indexed_x,
-                      0x39 : AND_absolute_indexed_y,
-                      0x35 : AND_direct_page_indexed_x, 
-                      0x23 : AND_stack_relative, 
-                      0x33 : AND_stack_relative_indirect_indexed_y,
-                      0x09 : ORA_const, 0x0f : ORA_absolute_long,
-                      0x0d : ORA_absolute, 0x05 : ORA_direct_page,
-                      0x1f : ORA_absolute_long_indexed_x,
-                      0x12 : ORA_direct_page_indirect, 
-                      0x01 : ORA_direct_page_indexed_x_indirect,
-                      0x07 : ORA_direct_page_indirect_long,
-                      0x17 : ORA_direct_page_indirect_long_indexed_y,
-                      0x11 : ORA_direct_page_indirect_indexed_y,
-                      0x1d : ORA_absolute_indexed_x, 
-                      0x19 : ORA_absolute_indexed_y,
-                      0x15 : ORA_direct_page_indexed_x,
-                      0x03 : ORA_stack_relative,
-                      0x13 : ORA_stack_relative_indirect_indexed_y,
-                      0x49 : EOR_const, 0x4d : EOR_absolute,
-                      0x4f : EOR_absolute_long,
-                      0x5f : EOR_absolute_long_indexed_x,
-                      0x45 : EOR_direct_page, 
-                      0x52 : EOR_direct_page_indirect,
-                      0x41 : EOR_direct_page_indexed_x_indirect,
-                      0x47 : EOR_direct_page_indirect_long,
-                      0x57 : EOR_direct_page_indirect_long_indexed_y,
-                      0x51 : EOR_direct_page_indirect_indexed_y,
-                      0x5d : EOR_absolute_indexed_x,
-                      0x59 : EOR_absolute_indexed_y,
-                      0x55 : EOR_direct_page_indexed_x, 
-                      0x43 : EOR_stack_relative,
-                      0x53 : EOR_stack_relative_indirect_indexed_y,
-                      0x4a : LSR_accumulator, 0x4e : LSR_absolute,
-                      0x46 : LSR_direct_page, 0x5e : LSR_absolute_indexed_x, 
-                      0x56 : LSR_direct_page_indexed_x, 0x0a : ASL_accumulator,
-                      0x0e : ASL_absolute, 0x06 : ASL_direct_page, 
-                      0x1e : ASL_absolute_indexed_x, 
-                      0x16 : ASL_direct_page_indexed_x, 0x2a : ROL_accumulator,
-                      0x2e : ROL_absolute, 0x26 : ROL_direct_page,
-                      0x3e : ROL_absolute_indexed_x, 
-                      0x36 : ROL_direct_page_indexed_x, 0x6a : ROR_accumulator,
-                      0x6e : ROR_absolute, 0x66 : ROR_direct_page,
-                      0x7e : ROR_absolute_indexed_x,
-                      0x76 : ROR_direct_page_indexed_x,
-                      0x48 : PHA, 0x68 : PLA, 0x5a : PHY, 0x7a : PLY,
-                      0xda : PHX, 0xfa : PLX, 0x08 : PHP, 0x28 : PLP, 
-                      0xf4 : PEA, 0xd4 : PEI, 0x8b : PHB, 0xab : PLB,
-                      0x4b : PHK, 0x0b : PHD, 0x2b : PLD, 0x62 : PER,
-                      0x20 : JSR, 0xfc : JSR_absolute_indexed_x_indirect,
-                      0x60 : RTS, 0x22 : JSL, 0x6b : RTL,
-                      0x54 : MVN, 0x44 : MVP, 0x00 : BRK, 0x40 : RTI,
-                      0x02 : COP, 0x89 : BIT_const, 0x2c : BIT_absolute,
-                      0x24 : BIT_direct_page,
-                      0x3c : BIT_absolute_indexed_x,
-                      0x34 : BIT_direct_page_indexed_x, 
-                      0x0c : TSB_absolute, 0x04 : TSB_direct_page,
-                      0x1c : TRB_absolute, 0x14 : TRB_direct_page,
-                      0x9a : TXS, 0xba : TSX, 0x42: WDM, 0xcb : WAI,
-                      0xdb : STP };
-
-  /**
-   * Load given program into memory and prepare for execution.
-   */ 
-  this.load_binary = function(raw_hex, memory_location_start, bank) {
-    var byte_buffer = [];
-
-    if(typeof bank === "undefined") {
-      bank = 0;
-    }
-
-    for(var i = 0; i < raw_hex.length; i++) {
-      byte_buffer.push(raw_hex[i]);
-      if(byte_buffer.length===2) {
-        this.mmu.store_byte_long(memory_location_start, bank,
-                                 parseInt(byte_buffer[0]+byte_buffer[1],
-                                          16));
-        memory_location_start++;
-        byte_buffer = [];
-      }
-    }
-  };
-
-  /**
-   * Step through the processing of a single instruction from the current
-   * location of the program counter.
-   */  
-  this.step = function() {
-    if(this.interrupt&&(!this.p.i||(this.interrupt===this.INTERRUPT.NMI))) {
-      // Load the related interrupt vector in page 0xff of bank zero.
-      if(!this.p.e) {
-        this.mmu.push_byte(this.r.k); 
-      }
-      this.mmu.push_byte(this.r.pc>>8);
-      this.mmu.push_byte(this.r.pc&0xff);
-      var p_byte = (this.p.n<<7)|(this.p.v<<6)|(this.p.m<<5)|(this.p.x<<4)|
-                   (this.p.d<<3)|(this.p.i<<2)|(this.p.z<<1)|this.p.c;
-      this.mmu.push_byte(p_byte);
-      if(!this.p.e) 
-        this.p.d = 0;
-      this.p.i = 1;
-      this.r.k = 0;
-
-      var low_byte, high_byte;
-      // Look for where to jump to for the interrupt.  
-      if(this.p.e) {
-        // NMI
-        if(this.interrupt===this.INTERRUPT.NMI) {
-          low_byte = this.mmu.read_byte_long(0xfffa, 0);
-          high_byte = this.mmu.read_byte_long(0xfffb, 0);
-          this.r.pc = (high_byte<<8)|low_byte;
-        // RESET
-        } else if(this.interrupt===this.INTERRUPT.RESET) {
-          low_byte = this.mmu.read_byte_long(0xfffc, 0);
-          high_byte = this.mmu.read_byte_long(0xfffd, 0);
-          this.r.pc = (high_byte<<8)|low_byte;
-        // ABORT
-        } else if(this.interrupt===this.INTERRUPT.ABORT) {
-          low_byte = this.mmu.read_byte_long(0xfff8, 0);
-          high_byte = this.mmu.read_byte_long(0xfff9, 0);
-          this.r.pc = (high_byte<<8)|low_byte;
-        // COP
-        } else if(this.interrupt===this.INTERRUPT.COP) {
-          low_byte = this.mmu.read_byte_long(0xfff4, 0);
-          high_byte = this.mmu.read_byte_long(0xfff5, 0);
-          this.r.pc = (high_byte<<8)|low_byte;
-        // IRQ or BRK
-        } else if(this.interrupt===this.INTERRUPT.IRQ ||
-                  this.interrupt===this.INTERRUPT.BRK) {
-          low_byte = this.mmu.read_byte_long(0xfffe, 0);
-          high_byte = this.mmu.read_byte_long(0xffff, 0);
-          this.r.pc = (high_byte<<8)|low_byte;
-        }
-      } else {
-        // NMI
-        if(this.interrupt===this.INTERRUPT.NMI) {
-          low_byte = this.mmu.read_byte_long(0xffea, 0);
-          high_byte = this.mmu.read_byte_long(0xffeb, 0);
-          this.r.pc = (high_byte<<8)|low_byte;
-        // ABORT
-        } else if(this.interrupt===this.INTERRUPT.ABORT) {
-          low_byte = this.mmu.read_byte_long(0xffe8, 0);
-          high_byte = this.mmu.read_byte_long(0xffe9, 0);
-          this.r.pc = (high_byte<<8)|low_byte;
-        // COP
-        } else if(this.interrupt===this.INTERRUPT.COP) {
-          low_byte = this.mmu.read_byte_long(0xffe4, 0);
-          high_byte = this.mmu.read_byte_long(0xffe5, 0);
-          this.r.pc = (high_byte<<8)|low_byte;
-        // IRQ
-        } else if(this.interrupt===this.INTERRUPT.IRQ) {
-          low_byte = this.mmu.read_byte_long(0xffee, 0);
-          high_byte = this.mmu.read_byte_long(0xffef, 0);
-          this.r.pc = (high_byte<<8)|low_byte;
-        // BRK
-        } else if(this.interrupt===this.INTERRUPT.BRK) {
-          low_byte = this.mmu.read_byte_long(0xffe6, 0);
-          high_byte = this.mmu.read_byte_long(0xffe7, 0);
-          this.r.pc = (high_byte<<8)|low_byte;
-        }
-      }
-
-      this.interrupt = this.INTERRUPT.NO_INTERRUPT;
-    }
-
-    var b = this.mmu.read_byte_long(this.r.pc, this.r.k); 
-    this.r.pc++;
-
-    // If we reach the end of the code then stop everything.
-    if(typeof b === "undefined") {
-      this.executing = false;
-      return;
-    }
-    var operation = this.opcode_map[b];
-    var bytes_required = operation.bytes_required(this);
-    if(bytes_required===1) {
-      operation.execute(this);
-    } else {
-      var bytes = [];
-      for(var i = 1; i < bytes_required; i++) {
-        bytes.push(this.mmu.read_byte_long(this.r.pc, this.r.k));
-        this.r.pc++;
-      }
-      operation.execute(this,bytes);
-    }
-
-    if(this.waiting||this.stopped) 
-      this.executing = false;
-  };
-
-  this.execute = function(start_address, max_cycles_per_second) {
-    // Default to 1MHz if no number given.
-    if(typeof max_cycles_per_second === "undefined") {
-      max_cycles_per_second = 1000000;
-    }
-
-    this.r.pc = start_address;
-    this.timer_run(max_cycles_per_second, 1000);
-  }; 
-
-  this.timer_run = function(max_cycles_per_period, period) {
-    var start = new Date().getTime();
-    this.executing = true;
-    while(this.executing) {
-      this.step();
-      // If execution stopped other than because of the cycle count
-      if(!this.executing) {
-        return;
-      }
-      if(this.cycle_count>=max_cycles_per_period) {
-        this.executing = false;
-        var now = new Date().getTime();
-        var wait = period - (now - start);
-        this.cycle_count = 0;
-        if(wait>0) {
-          setTimeout(this.timer_run.bind(this, max_cycles_per_period, period), wait);
-        } else {
-          this.timer_run(max_cycles_per_period, period);
-        }
-      }
-    }
-  };
-
-  this.reset = function() {
-    this.executing = false;
-    this.waiting = false;
-    this.stopped = false;
-    this.interrupt = this.INTERRUPT.NO_INTERRUPT;
-    this.r = { a:0, b:0, x:0, y:0, d:0, s:0xff, pc:0, dbr:0, k:0 };
-    this.p = { e:1, c:0, z:0, i:0, d:0, x:0, m:0, v:0, n:0 };
-    this.mmu.reset();
-    this.cycle_count = 0;
-  }; 
-};
-
-function MMU() {
-  this.cpu = {};
-  this.memory = { 0: {} };
-  this.memory_mapped_io_devices = {};
-
-  this.reset = function() {
-    this.memory ={ 0: {} };
-  };
-
-  this.add_memory_mapped_io_device = function(write_callback, read_callback,
-                                        bank, location) {
-    if(typeof this.memory_mapped_io_devices[bank] === 'undefined') {
-      this.memory_mapped_io_devices[bank] = {};
-    }
-    this.memory_mapped_io_devices[bank][location] = { write: write_callback, 
-                                                      read: read_callback }; 
-  };
-
-  this.pull_byte = function() {
-    if(this.cpu.p.e) {
-      if(this.cpu.r.s===0xff) {
-        this.cpu.r.s = 0;
-        return this.read_byte(0x100);
-      } else {
-        return this.read_byte(0x100|(++this.cpu.r.s));
-      }
-    } else {
-      return this.read_byte(++this.cpu.r.s);
-    }
-  };
-
-  this.push_byte = function(b) {
-    if(this.cpu.p.e) {
-      if(this.cpu.r.s===0) {
-    this.store_byte(0x100, b);
-        this.cpu.r.s = 0xff;
-      } else {
-        this.store_byte((0x100|(this.cpu.r.s--)), b);
-      }
-    } else {
-      this.store_byte(this.cpu.r.s--, b);
-    }
-  };
-
-  this.read_byte = function(memory_location) {
-    memory_location &= 0xffff; // Make sure the address is 16 bits.
-
-    var device_map_at_bank = this.memory_mapped_io_devices[this.cpu.r.dbr];
-    if(typeof device_map_at_bank !== "undefined") {
-      var device = device_map_at_bank[memory_location];
-      if(typeof device !== "undefined")
-        return device.read(this.cpu);   
-    } 
-    return this.memory[this.cpu.r.dbr][memory_location];
-  };
-
-  this.read_byte_long = function(memory_location, bank) {
-    // Make sure addresses given are the proper size.
-    memory_location &= 0xffff;
-    bank &= 0xff;
-
-    if(typeof this.memory[bank] === 'undefined') {
-      this.memory[bank] = {};
-    }
-    var device_map_at_bank = this.memory_mapped_io_devices[bank];
-    if(typeof device_map_at_bank !== "undefined") {
-      var device = device_map_at_bank[memory_location];
-      if(typeof device !== "undefined")
-        return device.read(this.cpu);   
-    }
-    return this.memory[bank][memory_location];
-  };
-
-  this.store_byte = function(memory_location, b) {
-    memory_location &= 0xffff; // Make sure the address is 16 bits
-    b &= 0xff; // Make sure the byte is actually a byte long
-
-    var device_map_at_bank = this.memory_mapped_io_devices[this.cpu.r.dbr];
-    if(typeof device_map_at_bank !== "undefined") {
-      var device = device_map_at_bank[memory_location];
-      if(typeof device !== "undefined") 
-        device.write(this.cpu, b);
-    } 
-    this.memory[this.cpu.r.dbr][memory_location] = b;
-  };
-
-  this.store_byte_long = function(memory_location, bank, b) {
-    // Make sure addresses and byte given are the proper size.
-    memory_location &= 0xffff;
-    bank &= 0xff;
-    b &= 0xff;
-
-    if(typeof this.memory[bank] === 'undefined') {
-      this.memory[bank] = {};
-    }
-    var device_map_at_bank = this.memory_mapped_io_devices[bank];
-    if(typeof device_map_at_bank !== "undefined") {
-      var device = device_map_at_bank[memory_location];
-      if(typeof device !== "undefined")
-        device.write(this.cpu, b);
-    } 
-    this.memory[bank][memory_location] = b;
-  };
-}
-
 var STP = {
   bytes_required:function() {
     return 1;
@@ -622,8 +105,8 @@ var TRB_absolute = {
       cpu.cycle_count+=2;     
 
       var low_byte = cpu.mmu.read_byte(memory_location),
-          high_byte = cpu.mmu.read_byte(memory_location+1);
-      data = (high_byte<<8) | low_byte;
+          high_byte = cpu.mmu.read_byte(memory_location+1),
+          data = (high_byte<<8) | low_byte;
       if((data & cpu.r.a) === 0) {
         cpu.p.z = 1;
       } else {
@@ -7392,4 +6875,519 @@ var XBA = {
   }
 };
 
+function MMU() {
+  this.cpu = {};
+  this.memory = { 0: {} };
+  this.memory_mapped_io_devices = {};
+
+  this.reset = function() {
+    this.memory ={ 0: {} };
+  };
+
+  this.add_memory_mapped_io_device = function(write_callback, read_callback,
+                                        bank, location) {
+    if(typeof this.memory_mapped_io_devices[bank] === 'undefined') {
+      this.memory_mapped_io_devices[bank] = {};
+    }
+    this.memory_mapped_io_devices[bank][location] = { write: write_callback,
+                                                      read: read_callback };
+  };
+
+  this.pull_byte = function() {
+    if(this.cpu.p.e) {
+      if(this.cpu.r.s===0xff) {
+        this.cpu.r.s = 0;
+        return this.read_byte(0x100);
+      } else {
+        return this.read_byte(0x100|(++this.cpu.r.s));
+      }
+    } else {
+      return this.read_byte(++this.cpu.r.s);
+    }
+  };
+
+  this.push_byte = function(b) {
+    if(this.cpu.p.e) {
+      if(this.cpu.r.s===0) {
+    this.store_byte(0x100, b);
+        this.cpu.r.s = 0xff;
+      } else {
+        this.store_byte((0x100|(this.cpu.r.s--)), b);
+      }
+    } else {
+      this.store_byte(this.cpu.r.s--, b);
+    }
+  };
+
+  this.read_byte = function(memory_location) {
+    memory_location &= 0xffff; // Make sure the address is 16 bits.
+
+    var device_map_at_bank = this.memory_mapped_io_devices[this.cpu.r.dbr];
+    if(typeof device_map_at_bank !== "undefined") {
+      var device = device_map_at_bank[memory_location];
+      if(typeof device !== "undefined")
+        return device.read(this.cpu);
+    }
+    return this.memory[this.cpu.r.dbr][memory_location];
+  };
+
+  this.read_byte_long = function(memory_location, bank) {
+    // Make sure addresses given are the proper size.
+    memory_location &= 0xffff;
+    bank &= 0xff;
+
+    if(typeof this.memory[bank] === 'undefined') {
+      this.memory[bank] = {};
+    }
+    var device_map_at_bank = this.memory_mapped_io_devices[bank];
+    if(typeof device_map_at_bank !== "undefined") {
+      var device = device_map_at_bank[memory_location];
+      if(typeof device !== "undefined")
+        return device.read(this.cpu);
+    }
+    return this.memory[bank][memory_location];
+  };
+
+  this.store_byte = function(memory_location, b) {
+    memory_location &= 0xffff; // Make sure the address is 16 bits
+    b &= 0xff; // Make sure the byte is actually a byte long
+
+    var device_map_at_bank = this.memory_mapped_io_devices[this.cpu.r.dbr];
+    if(typeof device_map_at_bank !== "undefined") {
+      var device = device_map_at_bank[memory_location];
+      if(typeof device !== "undefined")
+        device.write(this.cpu, b);
+    }
+    this.memory[this.cpu.r.dbr][memory_location] = b;
+  };
+
+  this.store_byte_long = function(memory_location, bank, b) {
+    // Make sure addresses and byte given are the proper size.
+    memory_location &= 0xffff;
+    bank &= 0xff;
+    b &= 0xff;
+
+    if(typeof this.memory[bank] === 'undefined') {
+      this.memory[bank] = {};
+    }
+    var device_map_at_bank = this.memory_mapped_io_devices[bank];
+    if(typeof device_map_at_bank !== "undefined") {
+      var device = device_map_at_bank[memory_location];
+      if(typeof device !== "undefined")
+        device.write(this.cpu, b);
+    }
+    this.memory[bank][memory_location] = b;
+  };
+}
+
+window.CPU_65816 = function() {
+  // Registers
+  this.r = {
+    a:0,     // Accumulator
+    b:0,     // "Hidden" Accumulator Register(high byte in 8-bit mode)
+    x:0,     // X Index Register
+    y:0,     // Y Index Register
+    d:0,     // Direct Page Register
+    s:0xff,  // Stack Pointer
+    pc:0,    // Program Counter
+    dbr:0,   // Data Bank Register
+    k:0      // Program Bank Register
+  };
+
+  // P register flags.
+  this.p = {
+    e:1, // Emulator                  (0 = native mode)
+    c:0, // Carry                     (1 = carry)
+    z:0, // Zero                      (1 = zero)
+    i:0, // IRQ Disable               (1 = disabled)
+    d:0, // Decimal Mode              (1 = decimal, 0 = binary)
+    x:0, // Index Register Select     (1 = 8-bit, 0 = 16-bit)
+    m:0, // Memory/Accumulator Select (1 = 8-bit, 0 = 16-bit)
+    v:0, // Overflow                  (1 = overflow)
+    n:0  // Negative                  (1 = negative)
+  };
+
+  this.INTERRUPT = { NO_INTERRUPT: 0, NMI: 1, RESET: 2, ABORT: 3, COP: 4,
+                     IRQ: 5, BRK: 6 };
+
+  this.interrupt = this.INTERRUPT.NO_INTERRUPT;
+
+  // This is used to keep the cpu going if started with start().
+  this.executing = false;
+
+  // This is set by the WAI operation to stop execution until an interrupt
+  // is received.
+  this.waiting = false;
+
+  // This is set by the STP operation to stop execution until a RESET
+  // interrupt is received.
+  this.stopped = false;
+
+  this.raise_interrupt = function(i) {
+    if(this.waiting) {
+      this.waiting = false;
+      if(this.p.i) {
+        if(i===this.INTERRUPT.IRQ) {
+          i = this.INTERRUPT.NO_INTERRUPT;
+        }
+      }
+      this.interrupt = i;
+      this.start();
+    } else if(this.stopped&&(i===this.INTERRUPT.RESET)) {
+      this.stopped = false;
+      this.start();
+    } else {
+      this.interrupt = i;
+    }
+  };
+
+  this.cycle_count = 0;
+
+  this.mmu = new MMU();
+  this.mmu.cpu = this;
+
+  this.opcode_map = { 0xfb : XCE, 0x18 : CLC, 0x78 : SEI, 0x38 : SEC,
+                      0x58 : CLI, 0xc2 : REP, 0xe2 : SEP, 0xd8 : CLD,
+                      0xf8 : SED, 0xb8 : CLV, 0xeb : XBA, 0xa9 : LDA_const,
+                      0xad : LDA_absolute, 0xaf : LDA_absolute_long,
+                      0xbf : LDA_absolute_long_indexed_x,
+                      0xa5 : LDA_direct_page, 0xbd : LDA_absolute_indexed_x,
+                      0xb5 : LDA_direct_page_indexed_x,
+                      0xb9 : LDA_absolute_indexed_y,
+                      0xa1 : LDA_direct_page_indexed_x_indirect,
+                      0xb2 : LDA_direct_page_indirect,
+                      0xa7 : LDA_direct_page_indirect_long,
+                      0xb7 : LDA_direct_page_indirect_long_indexed_y,
+                      0xb1 : LDA_direct_page_indirect_indexed_y,
+                      0xa3 : LDA_stack_relative,
+                      0xb3 : LDA_stack_relative_indirect_indexed_y,
+                      0xa2 : LDX_const,
+                      0xae : LDX_absolute, 0xa6 : LDX_direct_page,
+                      0xa0 : LDY_const, 0xbc : LDY_absolute_indexed_x,
+                      0xb4 : LDY_direct_page_indexed_x,
+                      0xbe : LDX_absolute_indexed_y,
+                      0xb6 : LDX_direct_page_indexed_y,
+                      0xac : LDY_absolute, 0xa4 : LDY_direct_page, 0xea : NOP,
+                      0x8d : STA_absolute, 0x85 : STA_direct_page,
+                      0x8f : STA_absolute_long,
+                      0x9f : STA_absolute_long_indexed_x,
+                      0x81 : STA_direct_page_indexed_x_indirect,
+                      0x92 : STA_direct_page_indirect,
+                      0x87 : STA_direct_page_indirect_long,
+                      0x97 : STA_direct_page_indirect_long_indexed_y,
+                      0x91 : STA_direct_page_indirect_indexed_y,
+                      0x9d : STA_absolute_indexed_x,
+                      0x99 : STA_absolute_indexed_y,
+                      0x95 : STA_direct_page_indexed_x,
+                      0x83 : STA_stack_relative,
+                      0x93 : STA_stack_relative_indirect_indexed_y,
+                      0x8e : STX_absolute, 0x86 : STX_direct_page,
+                      0x96 : STX_direct_page_indexed_y,
+                      0x8c : STY_absolute, 0x84 : STY_direct_page,
+                      0x94 : STY_direct_page_indexed_x,
+                      0x1a : INC_accumulator, 0xe6 : INC_direct_page,
+                      0xee : INC_absolute, 0xf6 : INC_direct_page_indexed_x,
+                      0xfe : INC_absolute_indexed_x,
+                      0xe8 : INX, 0xc8 : INY,
+                      0x3a : DEC_accumulator, 0xce : DEC_absolute,
+                      0xde : DEC_absolute_indexed_x,
+                      0xc6 : DEC_direct_page, 0xca : DEX, 0x88 : DEY,
+                      0xd6 : DEC_direct_page_indexed_x,
+                      0x9c : STZ_absolute, 0x64 : STZ_direct_page,
+                      0x9e : STZ_absolute_indexed_x,
+                      0x74 : STZ_direct_page_indexed_x, 0x9b : TXY,
+                      0xbb : TYX, 0xaa : TAX, 0xa8 : TAY, 0x8a : TXA,
+                      0x98 : TYA, 0x5b : TCD, 0x7b : TDC, 0x1b : TCS,
+                      0x3b : TSC, 0x4c : JMP_absolute,
+                      0x5c : JMP_absolute_long,
+                      0xdc : JMP_absolute_indirect_long,
+                      0x7c : JMP_absolute_indexed_x_indirect,
+                      0x6c : JMP_absolute_indirect, 0x80 : BRA, 0x82 : BRL,
+                      0xf0 : BEQ, 0xd0 : BNE, 0x90 : BCC, 0xb0 : BCS,
+                      0x50 : BVC, 0x70 : BVS, 0x10 : BPL, 0x30 : BMI,
+                      0x69 : ADC_const, 0x6d : ADC_absolute,
+                      0x61 : ADC_direct_page_indexed_x_indirect,
+                      0x6f : ADC_absolute_long,
+                      0x7f : ADC_absolute_long_indexed_x,
+                      0x65 : ADC_direct_page, 0x72 : ADC_direct_page_indirect,
+                      0x67 : ADC_direct_page_indirect_long,
+                      0x77 : ADC_direct_page_indirect_long_indexed_y,
+                      0x71 : ADC_direct_page_indirect_indexed_y,
+                      0x7d : ADC_absolute_indexed_x,
+                      0x79 : ADC_absolute_indexed_y,
+                      0x75 : ADC_direct_page_indexed_x,
+                      0x63 : ADC_stack_relative,
+                      0x73 : ADC_stack_relative_indirect_indexed_y,
+                      0xe9 : SBC_const,
+                      0xed : SBC_absolute, 0xe5 : SBC_direct_page,
+                      0xef : SBC_absolute_long,
+                      0xff : SBC_absolute_long_indexed_x,
+                      0xf2 : SBC_direct_page_indirect,
+                      0xe1 : SBC_direct_page_indexed_x_indirect,
+                      0xe7 : SBC_direct_page_indirect_long,
+                      0xf7 : SBC_direct_page_indirect_long_indexed_y,
+                      0xf1 : SBC_direct_page_indirect_indexed_y,
+                      0xfd : SBC_absolute_indexed_x,
+                      0xf9 : SBC_absolute_indexed_y,
+                      0xf5 : SBC_direct_page_indexed_x,
+                      0xe3 : SBC_stack_relative,
+                      0xf3 : SBC_stack_relative_indirect_indexed_y,
+                      0xc9 : CMP_const, 0xc5 : CMP_direct_page,
+                      0xcd : CMP_absolute, 0xd2 : CMP_direct_page_indirect,
+                      0xcf : CMP_absolute_long,
+                      0xdf : CMP_absolute_long_indexed_x,
+                      0xc7 : CMP_direct_page_indirect_long,
+                      0xd7 : CMP_direct_page_indirect_long_indexed_y,
+                      0xd5 : CMP_direct_page_indexed_x,
+                      0xc1 : CMP_direct_page_indexed_x_indirect,
+                      0xdd : CMP_absolute_indexed_x,
+                      0xd9 : CMP_absolute_indexed_y,
+                      0xd1 : CMP_direct_page_indirect_indexed_y,
+                      0xc3 : CMP_stack_relative,
+                      0xd3 : CMP_stack_relative_indirect_indexed_y,
+                      0xe0 : CPX_const,
+                      0xec : CPX_absolute, 0xe4 : CPX_direct_page,
+                      0xc0 : CPY_const, 0xcc : CPY_absolute,
+                      0xc4 : CPY_direct_page, 0x29 : AND_const,
+                      0x2d : AND_absolute, 0x25 : AND_direct_page,
+                      0x2f : AND_absolute_long,
+                      0x3f : AND_absolute_long_indexed_x,
+                      0x21 : AND_direct_page_indexed_x_indirect,
+                      0x32 : AND_direct_page_indirect,
+                      0x27 : AND_direct_page_indirect_long,
+                      0x37 : AND_direct_page_indirect_long_indexed_y,
+                      0x31 : AND_direct_page_indirect_indexed_y,
+                      0x3d : AND_absolute_indexed_x,
+                      0x39 : AND_absolute_indexed_y,
+                      0x35 : AND_direct_page_indexed_x,
+                      0x23 : AND_stack_relative,
+                      0x33 : AND_stack_relative_indirect_indexed_y,
+                      0x09 : ORA_const, 0x0f : ORA_absolute_long,
+                      0x0d : ORA_absolute, 0x05 : ORA_direct_page,
+                      0x1f : ORA_absolute_long_indexed_x,
+                      0x12 : ORA_direct_page_indirect,
+                      0x01 : ORA_direct_page_indexed_x_indirect,
+                      0x07 : ORA_direct_page_indirect_long,
+                      0x17 : ORA_direct_page_indirect_long_indexed_y,
+                      0x11 : ORA_direct_page_indirect_indexed_y,
+                      0x1d : ORA_absolute_indexed_x,
+                      0x19 : ORA_absolute_indexed_y,
+                      0x15 : ORA_direct_page_indexed_x,
+                      0x03 : ORA_stack_relative,
+                      0x13 : ORA_stack_relative_indirect_indexed_y,
+                      0x49 : EOR_const, 0x4d : EOR_absolute,
+                      0x4f : EOR_absolute_long,
+                      0x5f : EOR_absolute_long_indexed_x,
+                      0x45 : EOR_direct_page,
+                      0x52 : EOR_direct_page_indirect,
+                      0x41 : EOR_direct_page_indexed_x_indirect,
+                      0x47 : EOR_direct_page_indirect_long,
+                      0x57 : EOR_direct_page_indirect_long_indexed_y,
+                      0x51 : EOR_direct_page_indirect_indexed_y,
+                      0x5d : EOR_absolute_indexed_x,
+                      0x59 : EOR_absolute_indexed_y,
+                      0x55 : EOR_direct_page_indexed_x,
+                      0x43 : EOR_stack_relative,
+                      0x53 : EOR_stack_relative_indirect_indexed_y,
+                      0x4a : LSR_accumulator, 0x4e : LSR_absolute,
+                      0x46 : LSR_direct_page, 0x5e : LSR_absolute_indexed_x,
+                      0x56 : LSR_direct_page_indexed_x, 0x0a : ASL_accumulator,
+                      0x0e : ASL_absolute, 0x06 : ASL_direct_page,
+                      0x1e : ASL_absolute_indexed_x,
+                      0x16 : ASL_direct_page_indexed_x, 0x2a : ROL_accumulator,
+                      0x2e : ROL_absolute, 0x26 : ROL_direct_page,
+                      0x3e : ROL_absolute_indexed_x,
+                      0x36 : ROL_direct_page_indexed_x, 0x6a : ROR_accumulator,
+                      0x6e : ROR_absolute, 0x66 : ROR_direct_page,
+                      0x7e : ROR_absolute_indexed_x,
+                      0x76 : ROR_direct_page_indexed_x,
+                      0x48 : PHA, 0x68 : PLA, 0x5a : PHY, 0x7a : PLY,
+                      0xda : PHX, 0xfa : PLX, 0x08 : PHP, 0x28 : PLP,
+                      0xf4 : PEA, 0xd4 : PEI, 0x8b : PHB, 0xab : PLB,
+                      0x4b : PHK, 0x0b : PHD, 0x2b : PLD, 0x62 : PER,
+                      0x20 : JSR, 0xfc : JSR_absolute_indexed_x_indirect,
+                      0x60 : RTS, 0x22 : JSL, 0x6b : RTL,
+                      0x54 : MVN, 0x44 : MVP, 0x00 : BRK, 0x40 : RTI,
+                      0x02 : COP, 0x89 : BIT_const, 0x2c : BIT_absolute,
+                      0x24 : BIT_direct_page,
+                      0x3c : BIT_absolute_indexed_x,
+                      0x34 : BIT_direct_page_indexed_x,
+                      0x0c : TSB_absolute, 0x04 : TSB_direct_page,
+                      0x1c : TRB_absolute, 0x14 : TRB_direct_page,
+                      0x9a : TXS, 0xba : TSX, 0x42: WDM, 0xcb : WAI,
+                      0xdb : STP };
+
+  /**
+   * Load given program into memory and prepare for execution.
+   */
+  this.load_binary = function(raw_hex, memory_location_start, bank) {
+    var byte_buffer = [];
+
+    if(typeof bank === "undefined") {
+      bank = 0;
+    }
+
+    for(var i = 0; i < raw_hex.length; i++) {
+      byte_buffer.push(raw_hex[i]);
+      if(byte_buffer.length===2) {
+        this.mmu.store_byte_long(memory_location_start, bank,
+                                 parseInt(byte_buffer[0]+byte_buffer[1],
+                                          16));
+        memory_location_start++;
+        byte_buffer = [];
+      }
+    }
+  };
+
+  /**
+   * Step through the processing of a single instruction from the current
+   * location of the program counter.
+   */
+  this.step = function() {
+    if(this.interrupt&&(!this.p.i||(this.interrupt===this.INTERRUPT.NMI))) {
+      // Load the related interrupt vector in page 0xff of bank zero.
+      if(!this.p.e) {
+        this.mmu.push_byte(this.r.k);
+      }
+      this.mmu.push_byte(this.r.pc>>8);
+      this.mmu.push_byte(this.r.pc&0xff);
+      var p_byte = (this.p.n<<7)|(this.p.v<<6)|(this.p.m<<5)|(this.p.x<<4)|
+                   (this.p.d<<3)|(this.p.i<<2)|(this.p.z<<1)|this.p.c;
+      this.mmu.push_byte(p_byte);
+      if(!this.p.e)
+        this.p.d = 0;
+      this.p.i = 1;
+      this.r.k = 0;
+
+      var low_byte, high_byte;
+      // Look for where to jump to for the interrupt.
+      if(this.p.e) {
+        // NMI
+        if(this.interrupt===this.INTERRUPT.NMI) {
+          low_byte = this.mmu.read_byte_long(0xfffa, 0);
+          high_byte = this.mmu.read_byte_long(0xfffb, 0);
+          this.r.pc = (high_byte<<8)|low_byte;
+        // RESET
+        } else if(this.interrupt===this.INTERRUPT.RESET) {
+          low_byte = this.mmu.read_byte_long(0xfffc, 0);
+          high_byte = this.mmu.read_byte_long(0xfffd, 0);
+          this.r.pc = (high_byte<<8)|low_byte;
+        // ABORT
+        } else if(this.interrupt===this.INTERRUPT.ABORT) {
+          low_byte = this.mmu.read_byte_long(0xfff8, 0);
+          high_byte = this.mmu.read_byte_long(0xfff9, 0);
+          this.r.pc = (high_byte<<8)|low_byte;
+        // COP
+        } else if(this.interrupt===this.INTERRUPT.COP) {
+          low_byte = this.mmu.read_byte_long(0xfff4, 0);
+          high_byte = this.mmu.read_byte_long(0xfff5, 0);
+          this.r.pc = (high_byte<<8)|low_byte;
+        // IRQ or BRK
+        } else if(this.interrupt===this.INTERRUPT.IRQ ||
+                  this.interrupt===this.INTERRUPT.BRK) {
+          low_byte = this.mmu.read_byte_long(0xfffe, 0);
+          high_byte = this.mmu.read_byte_long(0xffff, 0);
+          this.r.pc = (high_byte<<8)|low_byte;
+        }
+      } else {
+        // NMI
+        if(this.interrupt===this.INTERRUPT.NMI) {
+          low_byte = this.mmu.read_byte_long(0xffea, 0);
+          high_byte = this.mmu.read_byte_long(0xffeb, 0);
+          this.r.pc = (high_byte<<8)|low_byte;
+        // ABORT
+        } else if(this.interrupt===this.INTERRUPT.ABORT) {
+          low_byte = this.mmu.read_byte_long(0xffe8, 0);
+          high_byte = this.mmu.read_byte_long(0xffe9, 0);
+          this.r.pc = (high_byte<<8)|low_byte;
+        // COP
+        } else if(this.interrupt===this.INTERRUPT.COP) {
+          low_byte = this.mmu.read_byte_long(0xffe4, 0);
+          high_byte = this.mmu.read_byte_long(0xffe5, 0);
+          this.r.pc = (high_byte<<8)|low_byte;
+        // IRQ
+        } else if(this.interrupt===this.INTERRUPT.IRQ) {
+          low_byte = this.mmu.read_byte_long(0xffee, 0);
+          high_byte = this.mmu.read_byte_long(0xffef, 0);
+          this.r.pc = (high_byte<<8)|low_byte;
+        // BRK
+        } else if(this.interrupt===this.INTERRUPT.BRK) {
+          low_byte = this.mmu.read_byte_long(0xffe6, 0);
+          high_byte = this.mmu.read_byte_long(0xffe7, 0);
+          this.r.pc = (high_byte<<8)|low_byte;
+        }
+      }
+
+      this.interrupt = this.INTERRUPT.NO_INTERRUPT;
+    }
+
+    var b = this.mmu.read_byte_long(this.r.pc, this.r.k);
+    this.r.pc++;
+
+    // If we reach the end of the code then stop everything.
+    if(typeof b === "undefined") {
+      this.executing = false;
+      return;
+    }
+    var operation = this.opcode_map[b];
+    var bytes_required = operation.bytes_required(this);
+    if(bytes_required===1) {
+      operation.execute(this);
+    } else {
+      var bytes = [];
+      for(var i = 1; i < bytes_required; i++) {
+        bytes.push(this.mmu.read_byte_long(this.r.pc, this.r.k));
+        this.r.pc++;
+      }
+      operation.execute(this,bytes);
+    }
+
+    if(this.waiting||this.stopped)
+      this.executing = false;
+  };
+
+  this.execute = function(start_address, max_cycles_per_second) {
+    // Default to 1MHz if no number given.
+    if(typeof max_cycles_per_second === "undefined") {
+      max_cycles_per_second = 1000000;
+    }
+
+    this.r.pc = start_address;
+    this.timer_run(max_cycles_per_second, 1000);
+  };
+
+  this.timer_run = function(max_cycles_per_period, period) {
+    var start = new Date().getTime();
+    this.executing = true;
+    while(this.executing) {
+      this.step();
+      // If execution stopped other than because of the cycle count
+      if(!this.executing) {
+        return;
+      }
+      if(this.cycle_count>=max_cycles_per_period) {
+        this.executing = false;
+        var now = new Date().getTime();
+        var wait = period - (now - start);
+        this.cycle_count = 0;
+        if(wait>0) {
+          setTimeout(this.timer_run.bind(this, max_cycles_per_period, period), wait);
+        } else {
+          this.timer_run(max_cycles_per_period, period);
+        }
+      }
+    }
+  };
+
+  this.reset = function() {
+    this.executing = false;
+    this.waiting = false;
+    this.stopped = false;
+    this.interrupt = this.INTERRUPT.NO_INTERRUPT;
+    this.r = { a:0, b:0, x:0, y:0, d:0, s:0xff, pc:0, dbr:0, k:0 };
+    this.p = { e:1, c:0, z:0, i:0, d:0, x:0, m:0, v:0, n:0 };
+    this.mmu.reset();
+    this.cycle_count = 0;
+  };
+};
 })(window);
