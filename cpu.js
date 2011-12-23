@@ -6720,7 +6720,7 @@ var SEP = {
     }
 
     for(var i = 0; i < 8; i++) {
-      if(flags[i]==='1') {
+      if(flags.charAt(i)==='1') {
         ops[i]();
       }       
     }
@@ -6749,7 +6749,7 @@ var REP = {
     }
 
     for(var i = 0; i < 8; i++) {
-      if(flags[i]==='1') {
+      if(flags.charAt(i)==='1') {
         ops[i]();
       }       
     }
@@ -7228,7 +7228,7 @@ window.CPU_65816 = function() {
     }
 
     for(var i = 0; i < raw_hex.length; i++) {
-      byte_buffer.push(raw_hex[i]);
+      byte_buffer.push(raw_hex.charAt(i));
       if(byte_buffer.length===2) {
         this.mmu.store_byte_long(memory_location_start, bank,
                                  parseInt(byte_buffer[0]+byte_buffer[1],
