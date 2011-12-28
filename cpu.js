@@ -6630,22 +6630,32 @@ window.CPU_65816 = function() {
 
   /**
    * Load given program into memory and prepare for execution.
+   * raw_hex could either be a string of hex numbers or an array
+   * of bytes.
    */
   this.load_binary = function(raw_hex, memory_location_start, bank) {
-    var byte_buffer = [];
+    var byte_buffer = [],
+        i = 0;
 
     if(typeof bank === "undefined") {
       bank = 0;
     }
 
-    for(var i = 0; i < raw_hex.length; i++) {
-      byte_buffer.push(raw_hex.charAt(i));
-      if(byte_buffer.length===2) {
-        this.mmu.store_byte_long(memory_location_start, bank,
-                                 parseInt(byte_buffer[0]+byte_buffer[1],
-                                          16));
+    if(typeof raw_hex === 'string') {
+      for(;i < raw_hex.length; i++) {
+        byte_buffer.push(raw_hex.charAt(i));
+        if(byte_buffer.length===2) {
+          this.mmu.store_byte_long(memory_location_start, bank,
+                                   parseInt(byte_buffer[0]+byte_buffer[1],
+                                            16));
+          memory_location_start++;
+          byte_buffer = [];
+        }
+      }
+    } else {
+      for(;i < raw_hex.length; i++) {
+        this.mmu.store_byte_long(memory_location_start, bank, raw_hex[i]);
         memory_location_start++;
-        byte_buffer = [];
       }
     }
   };

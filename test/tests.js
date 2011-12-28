@@ -26,6 +26,7 @@ function run_tests() {
   test_subroutines();
   test_mvn_and_mvp();
   test_emulation_mode();
+  test_cpu_load_binary();
 }
 
 function test_lda() {
@@ -1140,5 +1141,25 @@ function test_rep() {
                        "register");
     equal(cpu.p.c, 0, "'REP #$cf' should clear the c bit of the p status "+
                        "register");
+  });
+}
+
+function test_cpu_load_binary() {
+  test("Make sure that load binary can work with hex strings", function() {
+    var cpu = new CPU_65816();    
+    cpu.load_binary("18fb", 0x8000);
+    equal(cpu.mmu.memory[cpu.r.k][0x8000], 0x18,
+          "$8000 should equal 0x18");
+    equal(cpu.mmu.memory[cpu.r.k][0x8001], 0xfb,
+          "$8001 should equal 0xfb");
+  });
+
+  test("Make sure that load_binary can work with arrays", function() {
+    var cpu = new CPU_65816();    
+    cpu.load_binary([0x18, 0xfb], 0x8000);
+    equal(cpu.mmu.memory[cpu.r.k][0x8000], 0x18,
+          "$8000 should equal 0x18");
+    equal(cpu.mmu.memory[cpu.r.k][0x8001], 0xfb,
+          "$8001 should equal 0xfb");
   });
 }
