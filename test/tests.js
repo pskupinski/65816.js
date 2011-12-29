@@ -1148,18 +1148,18 @@ function test_cpu_load_binary() {
   test("Make sure that load binary can work with hex strings", function() {
     var cpu = new CPU_65816();    
     cpu.load_binary("18fb", 0x8000);
-    equal(cpu.mmu.memory[cpu.r.k][0x8000], 0x18,
+    equal(cpu.mmu.read_byte_long(0x8000, cpu.r.k), 0x18,
           "$8000 should equal 0x18");
-    equal(cpu.mmu.memory[cpu.r.k][0x8001], 0xfb,
+    equal(cpu.mmu.read_byte_long(0x8001, cpu.r.k), 0xfb,
           "$8001 should equal 0xfb");
   });
 
   test("Make sure that load_binary can work with arrays", function() {
     var cpu = new CPU_65816();    
     cpu.load_binary([0x18, 0xfb], 0x8000);
-    equal(cpu.mmu.memory[cpu.r.k][0x8000], 0x18,
+    equal(cpu.mmu.read_byte_long(0x8000, cpu.r.k), 0x18,
           "$8000 should equal 0x18");
-    equal(cpu.mmu.memory[cpu.r.k][0x8001], 0xfb,
+    equal(cpu.mmu.read_byte_long(0x8001, cpu.r.k), 0xfb,
           "$8001 should equal 0xfb");
   });
 }
