@@ -27,6 +27,7 @@ function run_tests() {
   test_mvn_and_mvp();
   test_emulation_mode();
   test_cpu_load_binary();
+  test_cpu_memory_mapped_io_devices();
 }
 
 function test_lda() {
@@ -1145,6 +1146,7 @@ function test_rep() {
 }
 
 function test_cpu_load_binary() {
+  module("cpu.load_binary");
   test("Make sure that load binary can work with hex strings", function() {
     var cpu = new CPU_65816();    
     cpu.load_binary("18fb", 0x8000);
@@ -1161,5 +1163,35 @@ function test_cpu_load_binary() {
           "$8000 should equal 0x18");
     equal(cpu.mmu.read_byte_long(0x8001, cpu.r.k), 0xfb,
           "$8001 should equal 0xfb");
+  });
+}
+
+function test_cpu_memory_mapped_io_devices() {
+  module("memory mapped io devices");
+  test("Make sure that memory mapped io devices properly receive input", 
+       function() {
+    var cpu = new CPU_65816(),
+        written_value,
+        write_callback = function(cpu, b) {
+          written_value = b;
+        };
+    cpu.mmu.add_memory_mapped_io_device(write_callback, null, 0, 1); 
+    cpu.load_binary("a9ff8501", 0x8000);
+    cpu.execute(0x8000); 
+    strictEqual(written_value, 0xff, "0xff should be the value received");
+  });
+
+  test("Make sure that memory mapped io devices can be read from properly",
+       function() {
+    var cpu = new CPU_65816(),
+        read_value = 0xee,
+        read_callback = function(cpu) {
+          return read_value;
+        };
+    cpu.mmu.add_memory_mapped_io_device(null, read_callback, 0, 1);
+    cpu.load_binary("a501", 0x8000);
+    cpu.execute(0x8000);
+    strictEqual(cpu.r.a, read_value, "The accumulator should equal the value read from "+
+                "the memory mapped io device, 0xee");
   });
 }
