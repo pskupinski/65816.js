@@ -2969,33 +2969,10 @@ var LDY_const = {
   }
 };
 
-var LDY_absolute_indexed_x = {
-  bytes_required:function() {
-    return 3;
-  },
-  execute:function(cpu, bytes) {
-    cpu.cycle_count+=4;
-
-    var original_location = (bytes[1]<<8)|bytes[0],
-        memory_location = original_location + cpu.r.x;
-
-    if((original_location&0xff00)!==(memory_location&0xff00))
-      cpu.cycle_count++;
-
-    if(cpu.p.e||cpu.p.x) {
-      cpu.r.y = cpu.mmu.read_byte(memory_location);
-      cpu.p.n = cpu.r.y >> 7;
-    } else {
-      cpu.cycle_count++;
-
-      cpu.r.y = cpu.mmu.read_word(memory_location);
-      cpu.p.n = cpu.r.y >> 15;
-    }
-    cpu_lib.r.p.check_z(cpu, cpu.r.y);
-  }
-};
-
 var LDY_absolute = new cpu_lib.addressing.Absolute(LDY_const);
+
+var LDY_absolute_indexed_x =
+  new cpu_lib.addressing.Absolute_indexed_x(LDY_absolute);
 
 var LDY_direct_page = new cpu_lib.addressing.Direct_page(LDY_const);
 
