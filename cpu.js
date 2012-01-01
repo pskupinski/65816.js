@@ -109,6 +109,32 @@ var cpu_lib = {
         }
       };
     },
+    Direct_page_indirect_indexed_y: function(instruction) {
+      this.bytes_required = function() {
+        return 2;
+      };
+
+      this.execute = function(cpu, bytes) {
+        cpu.cycle_count+=3; 
+
+        if((cpu.r.d&0xff)!==0)
+          cpu.cycle_count++;
+
+        var memory_location = bytes[0] + cpu.r.d,
+            original_location = cpu.mmu.read_word(memory_location),
+            absolute_location = original_location + cpu.r.y;
+
+        if((original_location&0xff00)!==(absolute_location&0xff00))
+          cpu.cycle_count++;
+
+        if(cpu.p.e||cpu.p.m) {
+          instruction.execute(cpu, [cpu.mmu.read_byte(absolute_location)]);
+        } else {
+          instruction.execute(cpu, [cpu.mmu.read_byte(absolute_location),
+                                    cpu.mmu.read_byte(absolute_location+1)]);
+        }
+      };
+    },
     Direct_page_indirect_long: function(instruction) {
       this.bytes_required = function() {
         return 2;
@@ -1468,32 +1494,8 @@ var EOR_direct_page_indirect_long_indexed_y = {
 var EOR_direct_page_indirect_long =
   new cpu_lib.addressing.Direct_page_indirect_long(EOR_const);
 
-var EOR_direct_page_indirect_indexed_y = {
-   bytes_required:function() {
-    return 2;
-  },
-  execute:function(cpu, bytes) {
-    cpu.cycle_count+=3;
-
-    if((cpu.r.d&0xff)!==0)
-      cpu.cycle_count++;
-
-    var memory_location = bytes[0] + cpu.r.d,
-        original_location = cpu.mmu.read_word(memory_location),
-        absolute_location = original_location + cpu.r.y;
-
-    if((original_location&0xff00)!==(absolute_location&0xff00))
-      cpu.cycle_count++;
-
-    if(cpu.p.e||cpu.p.m) {
-      EOR_const.execute(cpu, [cpu.mmu.read_byte(absolute_location)]);
-    } else {
-      var low_byte = cpu.mmu.read_byte(absolute_location),
-          high_byte = cpu.mmu.read_byte(absolute_location+1);
-      EOR_const.execute(cpu, [low_byte, high_byte]);
-    }
-  }
-};
+var EOR_direct_page_indirect_indexed_y =
+  new cpu_lib.addressing.Direct_page_indirect_indexed_y(EOR_const);
 
 var EOR_absolute_indexed_x =
   new cpu_lib.addressing.Absolute_indexed_x(EOR_absolute);
@@ -1584,32 +1586,8 @@ var ORA_direct_page_indirect_long_indexed_y = {
   }
 };
 
-var ORA_direct_page_indirect_indexed_y = {
-   bytes_required:function() {
-    return 2;
-  },
-  execute:function(cpu, bytes) {
-    cpu.cycle_count+=3;
-
-    if((cpu.r.d&0xff)!==0)
-      cpu.cycle_count++;
-
-    var memory_location = bytes[0] + cpu.r.d,
-        original_location = cpu.mmu.read_word(memory_location),
-        absolute_location = original_location + cpu.r.y;
-
-    if((original_location&0xff00)!==(absolute_location&0xff00))
-      cpu.cycle_count++;
-
-    if(cpu.p.e||cpu.p.m) {
-      ORA_const.execute(cpu, [cpu.mmu.read_byte(absolute_location)]);
-    } else {
-      var low_byte = cpu.mmu.read_byte(absolute_location),
-          high_byte = cpu.mmu.read_byte(absolute_location+1);
-      ORA_const.execute(cpu, [low_byte, high_byte]);
-    }
-  }
-};
+var ORA_direct_page_indirect_indexed_y =
+  new cpu_lib.addressing.Direct_page_indirect_indexed_y(ORA_const);
 
 var ORA_absolute_indexed_x =
   new cpu_lib.addressing.Absolute_indexed_x(ORA_absolute);
@@ -1701,32 +1679,8 @@ var AND_direct_page_indirect_long_indexed_y = {
   }
 };
 
-var AND_direct_page_indirect_indexed_y = {
-   bytes_required:function() {
-    return 2;
-  },
-  execute:function(cpu, bytes) {
-    cpu.cycle_count+=3;
-
-    if((cpu.r.d&0xff)!==0)
-      cpu.cycle_count++;
-
-    var memory_location = bytes[0] + cpu.r.d,
-        original_location = cpu.mmu.read_word(memory_location),
-        absolute_location = original_location + cpu.r.y;
-
-    if((original_location&0xff00)!==(absolute_location&0xff00))
-      cpu.cycle_count++;
-
-    if(cpu.p.e||cpu.p.m) {
-      AND_const.execute(cpu, [cpu.mmu.read_byte(absolute_location)]);
-    } else {
-      var low_byte = cpu.mmu.read_byte(absolute_location),
-          high_byte = cpu.mmu.read_byte(absolute_location+1);
-      AND_const.execute(cpu, [low_byte, high_byte]);
-    }
-  }
-};
+var AND_direct_page_indirect_indexed_y =
+  new cpu_lib.addressing.Direct_page_indirect_indexed_y(AND_const);
 
 var AND_absolute_indexed_x =
   new cpu_lib.addressing.Absolute_indexed_x(AND_absolute);
@@ -1910,32 +1864,8 @@ var CMP_direct_page_indirect_long_indexed_y = {
   }
 };
 
-var CMP_direct_page_indirect_indexed_y = {
-   bytes_required:function() {
-    return 2;
-  },
-  execute:function(cpu, bytes) {
-    cpu.cycle_count+=3;
-
-    if((cpu.r.d&0xff)!==0)
-      cpu.cycle_count++;
-
-    var memory_location = bytes[0] + cpu.r.d,
-        original_location = cpu.mmu.read_word(memory_location),
-        absolute_location = original_location + cpu.r.y;
-
-    if((original_location&0xff00)!==(absolute_location&0xff00))
-      cpu.cycle_count++;
-
-    if(cpu.p.e||cpu.p.m) {
-      CMP_const.execute(cpu, [cpu.mmu.read_byte(absolute_location)]);
-    } else {
-      var low_byte = cpu.mmu.read_byte(absolute_location),
-          high_byte = cpu.mmu.read_byte(absolute_location+1);
-      CMP_const.execute(cpu, [low_byte, high_byte]);
-    }
-  }
-};
+var CMP_direct_page_indirect_indexed_y =
+  new cpu_lib.addressing.Direct_page_indirect_indexed_y(CMP_const);
 
 var CMP_absolute = new cpu_lib.addressing.Absolute(CMP_const);
 
@@ -2124,32 +2054,8 @@ var SBC_direct_page_indirect_long_indexed_y = {
   }
 };
 
-var SBC_direct_page_indirect_indexed_y = {
-   bytes_required:function() {
-    return 2;
-  },
-  execute:function(cpu, bytes) {
-    cpu.cycle_count+=3;
-
-    if((cpu.r.d&0xff)!==0)
-      cpu.cycle_count++;
-
-    var memory_location = bytes[0] + cpu.r.d,
-        original_location = cpu.mmu.read_word(memory_location),
-        absolute_location = original_location + cpu.r.y;
-
-    if((original_location&0xff00)!==(absolute_location&0xff00))
-      cpu.cycle_count++;
-
-    if(cpu.p.e||cpu.p.m) {
-      SBC_const.execute(cpu, [cpu.mmu.read_byte(absolute_location)]);
-    } else {
-      var low_byte = cpu.mmu.read_byte(absolute_location),
-          high_byte = cpu.mmu.read_byte(absolute_location+1);
-      SBC_const.execute(cpu, [low_byte, high_byte]);
-    }
-  }
-};
+var SBC_direct_page_indirect_indexed_y =
+  new cpu_lib.addressing.Direct_page_indirect_indexed_y(SBC_const);
 
 var SBC_absolute_indexed_x =
   new cpu_lib.addressing.Absolute_indexed_x(SBC_absolute);
@@ -2330,33 +2236,8 @@ var ADC_direct_page_indirect_long_indexed_y = {
 var ADC_direct_page_indirect_long =
   new cpu_lib.addressing.Direct_page_indirect_long(ADC_const);
 
-var ADC_direct_page_indirect_indexed_y = {
-   bytes_required:function() {
-    return 2;
-  },
-  execute:function(cpu, bytes) {
-    if((cpu.r.d&0x00ff)!==0)
-      cpu.cycle_count+=4;
-    else
-      cpu.cycle_count+=3;
-
-    var memory_location = bytes[0] + cpu.r.d,
-        initial_absolute_location = cpu.mmu.read_word(memory_location),
-        absolute_location = initial_absolute_location + cpu.r.y;
-
-    // Add 1 cycle if page boundary crossed
-    if((initial_absolute_location&0xff00)!==(absolute_location&0xff00))
-      cpu.cycle_count++;
-
-    if(cpu.p.e||cpu.p.m) {
-      ADC_const.execute(cpu, [cpu.mmu.read_byte(absolute_location)]);
-    } else {
-      var low_byte = cpu.mmu.read_byte(absolute_location),
-          high_byte = cpu.mmu.read_byte(absolute_location+1);
-      ADC_const.execute(cpu, [low_byte, high_byte]);
-    }
-  }
-};
+var ADC_direct_page_indirect_indexed_y =
+  new cpu_lib.addressing.Direct_page_indirect_indexed_y(ADC_const);
 
 var ADC_absolute_indexed_x =
   new cpu_lib.addressing.Absolute_indexed_x(ADC_absolute);
@@ -3246,36 +3127,6 @@ var LDA_direct_page_indirect_long_indexed_y = {
   }
 };
 
-var LDA_direct_page_indirect_indexed_y = {
-  bytes_required:function() {
-    return 2;
-  },
-  execute:function(cpu, bytes) {
-    cpu.cycle_count+=5;
-
-    if((cpu.r.d&0xff)!==0)
-      cpu.cycle_count++;
-
-    var memory_location = bytes[0] + cpu.r.d,
-        original_location = cpu.mmu.read_word(memory_location),
-        absolute_location = original_location + cpu.r.y;
-
-    if((original_location&0xff00)!==(absolute_location&0xff00))
-      cpu.cycle_count++;
-
-    if(cpu.p.e||cpu.p.m) {
-      cpu.r.a = cpu.mmu.read_byte(absolute_location);
-      cpu.p.n = cpu.r.a >> 7;
-    } else {
-      cpu.cycle_count++;
-
-      cpu.r.a = cpu.mmu.read_word(absolute_location);
-      cpu.p.n = cpu.r.a >> 15;
-    }
-    cpu_lib.r.p.check_z(cpu, cpu.r.a);
-  }
-};
-
 var NOP = {
   bytes_required:function() {
     return 1;
@@ -4123,6 +3974,9 @@ var LDA_direct_page_indexed_x =
 
 var LDA_direct_page_indirect =
   new cpu_lib.addressing.Direct_page_indirect(LDA_const);
+
+var LDA_direct_page_indirect_indexed_y =
+  new cpu_lib.addressing.Direct_page_indirect_indexed_y(LDA_const);
 
 var LDA_absolute = new cpu_lib.addressing.Absolute(LDA_const);
 
