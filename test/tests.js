@@ -16,6 +16,9 @@
 
 function run_tests() {
   test_lda();
+  test_inc();
+  test_inx();
+  test_iny();
   test_stz();
   test_rep();
   test_sep();
@@ -314,6 +317,127 @@ function test_lda() {
                        "16-bit memory/accumulator mode.");
     equal(cpu.p.e, 0, "Hidden e flag of the p status register should be 0 "+
                        "for native mode.");
+  });
+}
+
+function test_inc() {
+  module("INC");
+  test("Test INC accumulator for 8-bit memory/accumulator mode.", function() {
+    var cpu = new CPU_65816(); 
+    cpu.load_binary("18fba9fe1a", 0x8000);
+    cpu.execute(0x8000);
+    equal(cpu.r.a, 0xff, "The accumulator should be 0xff after "+
+                          "incrementing 0xfe by one.");
+    equal(cpu.p.e, 0, "The hidden e flag should be zero for native mode.");
+    equal(cpu.p.m, 1, "The m flag should be one for 8-bit "+
+                       "memory/accumulator mode.");
+    cpu.reset();
+    cpu.load_binary("18fba9ff1a", 0x8000);
+    cpu.execute(0x8000);
+    equal(cpu.r.a, 0, "The accumulator should be zero after "+
+                      "incrementing 0xff by one.");
+    equal(cpu.p.e, 0, "The hidden e flag should be zero for native mode.");
+    equal(cpu.p.m, 1, "The m flag should be one for 8-bit "+
+                       "memory/accumulator mode.");
+  });
+  test("Test INC accumulator for 16-bit memory/accumulator mode.",
+       function() {
+    var cpu = new CPU_65816();
+    cpu.load_binary("18fbc220a9feff1a", 0x8000);
+    cpu.execute(0x8000);
+    equal(cpu.r.a, 0xffff, "The accumulator should be 0xffff after "+
+                           "incrementing 0xfffe by one.");
+    equal(cpu.p.e, 0, "The hidden e flag should be zero for native mode.");
+    equal(cpu.p.m, 0, "The m flag should be zero for 16-bit "+
+                      "memory/accumulator mode.");
+    cpu.reset(); 
+    cpu.load_binary("18fbc220a9ffff1a", 0x8000);
+    cpu.execute(0x8000);
+    equal(cpu.r.a, 0, "The accumulator should be zero after incrementing "+
+                      "0xffff by one.");
+    equal(cpu.p.e, 0, "The hidden e flag should be zero for native mode.");
+    equal(cpu.p.m, 0, "The m flag should be zero for 16-bit "+
+                      "memory/accumulator mode.");
+  });
+}
+
+function test_inx() {
+  module("INX");
+  test("Test INX for 8-bit index register mode.", function() {
+    var cpu = new CPU_65816();
+    cpu.load_binary("18fba2fee8", 0x8000);
+    cpu.execute(0x8000);
+    equal(cpu.r.x, 0xff, "The x register should be 0xff after incrementing "+
+                         "0xfe by one.");
+    equal(cpu.p.e, 0, "The hidden e flag should be zero for native mode.");
+    equal(cpu.p.m, 1, "The m flag should be one for 8-bit "+
+                       "memory/accumulator mode.");
+    cpu.reset();
+    cpu.load_binary("18fba2ffe8", 0x8000);
+    cpu.execute(0x8000);
+    equal(cpu.r.x, 0, "The x register should be zero after incrementing "+
+                      "0xff by one.");
+    equal(cpu.p.e, 0, "The hidden e flag should be zero for native mode.");
+    equal(cpu.p.m, 1, "The m flag should be one for 8-bit "+
+                       "memory/accumulator mode.");
+  });
+  test("Test INX for 16-bit index register mode.", function() {
+    var cpu = new CPU_65816();
+    cpu.load_binary("18fbc210a2feffe8", 0x8000);
+    cpu.execute(0x8000);
+    equal(cpu.r.x, 0xffff, "The x register should be 0xffff after "+
+                           "incrementing 0xfffe by one.");
+    equal(cpu.p.x, 0, "The x flag of the p status register should be zero "+
+                      "for 16-bit index register mode.");
+    equal(cpu.p.e, 0, "The hidden e flag should be zero for native mode.");
+    cpu.reset();
+    cpu.load_binary("18fbc210a2ffffe8", 0x8000);
+    cpu.execute(0x8000);
+    equal(cpu.r.x, 0, "The x register should be zero after incrementing "+
+                      "0xffff by one.");
+    equal(cpu.p.x, 0, "The x flag of the p status register should be zero "+
+                      "for 16-bit index register mode.");
+    equal(cpu.p.e, 0, "The hidden e flag should be zero for native mode.");
+  });
+}
+
+function test_iny() {
+  module("INY");
+  test("Test INY for 8-bit index register mode.", function() {
+    var cpu = new CPU_65816();
+    cpu.load_binary("18fba0fec8", 0x8000);
+    cpu.execute(0x8000);
+    equal(cpu.r.y, 0xff, "The y register should be 0xff after incrementing "+
+                         "0xfe by one.");
+    equal(cpu.p.e, 0, "The hidden e flag should be zero for native mode.");
+    equal(cpu.p.x, 1, "The x flag should be one for 8-bit index register "+
+                      "mode.");
+    cpu.reset();
+    cpu.load_binary("18fba0ffc8", 0x8000);
+    cpu.execute(0x8000);
+    equal(cpu.r.y, 0, "The y register should be zero after incrementing "+
+                      "0xff by one.");
+    equal(cpu.p.e, 0, "The hidden e flag should be zero for native mode.");
+    equal(cpu.p.x, 1, "The x flag should be one for 8-bit index register "+
+                      "mode.");
+  });
+  test("Test INY for 16-bit index register mode.", function() {
+    var cpu = new CPU_65816();
+    cpu.load_binary("18fbc210a0feffc8", 0x8000);
+    cpu.execute(0x8000);
+    equal(cpu.r.y, 0xffff, "The y register should be 0xffff after "+
+                           "incrementing 0xfffe by one.");
+    equal(cpu.p.x, 0, "The x flag of the p status register should be zero "+
+                      "for 16-bit index register mode.");
+    equal(cpu.p.e, 0, "The hidden e flag should be zero for native mode.");
+    cpu.reset();
+    cpu.load_binary("18fbc210a0ffffc8", 0x8000);
+    cpu.execute(0x8000);
+    equal(cpu.r.y, 0, "The y register should be zero after incrementing "+
+                      "0xffff by one.");
+    equal(cpu.p.x, 0, "The x flag of the p status register should be zero "+
+                      "for 16-bit index register mode.");
+    equal(cpu.p.e, 0, "The hidden e flag should be zero for native mode.");
   });
 }
 
