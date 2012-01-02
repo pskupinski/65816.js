@@ -3308,15 +3308,13 @@ var INC_absolute = {
       temp = (cpu.mmu.read_byte(memory_location) + 1) & 0xff;
       cpu.p.n = temp >> 7;
       cpu.mmu.store_byte(memory_location, temp);
-      cpu_lib.r.p.check_z(cpu, temp);
     } else {
       cpu.cycle_count+=2;
-
       temp = cpu.mmu.read_word(memory_location) + 1;
       cpu.p.n = temp >> 15;
       cpu.mmu.store_word(memory_location, temp);
-      cpu_lib.r.p.check_z(cpu, temp);
     }
+    cpu_lib.r.p.check_z(cpu, temp);
   }
 };
 
@@ -3333,15 +3331,13 @@ var INC_absolute_indexed_x = {
       temp = (cpu.mmu.read_byte(memory_location) + 1) & 0xff;
       cpu.p.n = temp >> 7;
       cpu.mmu.store_byte(memory_location, temp);
-      cpu_lib.r.p.check_z(cpu, temp);
     } else {
       cpu.cycle_count+=2;
-
       temp = cpu.mmu.read_word(memory_location) + 1;
       cpu.p.n = temp >> 15;
       cpu.mmu.store_word(memory_location, temp);
-      cpu_lib.r.p.check_z(cpu, temp);
     }
+    cpu_lib.r.p.check_z(cpu, temp);
   }
 };
 
@@ -3361,15 +3357,13 @@ var INC_direct_page = {
       temp = (cpu.mmu.read_byte(memory_location) + 1) & 0xff;
       cpu.mmu.store_byte(memory_location, temp);
       cpu.p.n = temp >> 7;
-      cpu_lib.r.p.check_z(cpu, temp);
     } else {
       cpu.cycle_count+=2;
-
       temp = cpu.mmu.read_word(memory_location) + 1;
       cpu.p.n = temp >> 15;
       cpu.mmu.store_word(memory_location, temp);
-      cpu_lib.r.p.check_z(cpu, temp);
     }
+    cpu_lib.r.p.check_z(cpu, temp);
   }
 };
 
@@ -3389,15 +3383,13 @@ var INC_direct_page_indexed_x = {
       temp = (cpu.mmu.read_byte(memory_location) + 1) & 0xff;
       cpu.mmu.store_byte(memory_location, temp);
       cpu.p.n = temp >> 7;
-      cpu_lib.r.p.check_z(cpu, temp);
     } else {
       cpu.cycle_count+=2;
-
       temp = cpu.mmu.read_word(memory_location) + 1;
       cpu.p.n = temp >> 15;
       cpu.mmu.store_word(memory_location, temp);
-      cpu_lib.r.p.check_z(cpu, temp);
     }
+    cpu_lib.r.p.check_z(cpu, temp);
   }
 };
 
