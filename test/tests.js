@@ -331,6 +331,10 @@ function test_inc() {
     equal(cpu.p.e, 0, "The hidden e flag should be zero for native mode.");
     equal(cpu.p.m, 1, "The m flag should be one for 8-bit "+
                        "memory/accumulator mode.");
+    equal(cpu.p.n, 1, "The n flag should be one to represent a negative "+
+                      "number.");
+    equal(cpu.p.z, 0, "The z flag should be zero to represent a non-zero"+
+                      "number.");
     cpu.reset();
     cpu.load_binary("18fba9ff1a", 0x8000);
     cpu.execute(0x8000);
@@ -339,6 +343,9 @@ function test_inc() {
     equal(cpu.p.e, 0, "The hidden e flag should be zero for native mode.");
     equal(cpu.p.m, 1, "The m flag should be one for 8-bit "+
                        "memory/accumulator mode.");
+    equal(cpu.p.n, 0, "The n flag should be zero to represent a non-negative "+
+                      "number.");
+    equal(cpu.p.z, 1, "The z flag should be one to represent zero.");
   });
   test("Test INC accumulator for 16-bit memory/accumulator mode.",
        function() {
@@ -350,6 +357,10 @@ function test_inc() {
     equal(cpu.p.e, 0, "The hidden e flag should be zero for native mode.");
     equal(cpu.p.m, 0, "The m flag should be zero for 16-bit "+
                       "memory/accumulator mode.");
+    equal(cpu.p.z, 0, "The z flag should be zero to represent a non-zero "+
+                      "number.");
+    equal(cpu.p.n, 1, "The n flag should be one to represent a negative "+
+                      "number.");
     cpu.reset(); 
     cpu.load_binary("18fbc220a9ffff1a", 0x8000);
     cpu.execute(0x8000);
@@ -358,6 +369,9 @@ function test_inc() {
     equal(cpu.p.e, 0, "The hidden e flag should be zero for native mode.");
     equal(cpu.p.m, 0, "The m flag should be zero for 16-bit "+
                       "memory/accumulator mode.");
+    equal(cpu.p.z, 1, "The z flag should be one to represent zero.");
+    equal(cpu.p.n, 0, "The n flag should be zero to represent a non-negative "+
+                      "number.");
   });
 }
 
@@ -370,16 +384,23 @@ function test_inx() {
     equal(cpu.r.x, 0xff, "The x register should be 0xff after incrementing "+
                          "0xfe by one.");
     equal(cpu.p.e, 0, "The hidden e flag should be zero for native mode.");
-    equal(cpu.p.m, 1, "The m flag should be one for 8-bit "+
-                       "memory/accumulator mode.");
+    equal(cpu.p.x, 1, "The x flag should be one for 8-bit "+
+                      "index register mode.");
+    equal(cpu.p.n, 1, "The n flag should be one to represent a negative "+
+                      "number.");
+    equal(cpu.p.z, 0, "The z flag should be zero to represent a non-zero "+
+                      "number.");
     cpu.reset();
     cpu.load_binary("18fba2ffe8", 0x8000);
     cpu.execute(0x8000);
     equal(cpu.r.x, 0, "The x register should be zero after incrementing "+
                       "0xff by one.");
     equal(cpu.p.e, 0, "The hidden e flag should be zero for native mode.");
-    equal(cpu.p.m, 1, "The m flag should be one for 8-bit "+
-                       "memory/accumulator mode.");
+    equal(cpu.p.x, 1, "The x flag should be one for 8-bit "+
+                      "index register mode.");
+    equal(cpu.p.z, 1, "The z flag should be one for zero.");
+    equal(cpu.p.n, 0, "The n flag should be zero to represent a "+
+                      "non-negative number.");
   });
   test("Test INX for 16-bit index register mode.", function() {
     var cpu = new CPU_65816();
@@ -390,6 +411,8 @@ function test_inx() {
     equal(cpu.p.x, 0, "The x flag of the p status register should be zero "+
                       "for 16-bit index register mode.");
     equal(cpu.p.e, 0, "The hidden e flag should be zero for native mode.");
+    equal(cpu.p.z, 0, "The z flag should be zero for a non-zero number.");
+    equal(cpu.p.n, 1, "The n flag should be one for a negative number.");
     cpu.reset();
     cpu.load_binary("18fbc210a2ffffe8", 0x8000);
     cpu.execute(0x8000);
@@ -398,6 +421,8 @@ function test_inx() {
     equal(cpu.p.x, 0, "The x flag of the p status register should be zero "+
                       "for 16-bit index register mode.");
     equal(cpu.p.e, 0, "The hidden e flag should be zero for native mode.");
+    equal(cpu.p.n, 0, "The n flag should be zero for a non-negative number.");
+    equal(cpu.p.z, 1, "The z flag should be one for zero.");
   });
 }
 
