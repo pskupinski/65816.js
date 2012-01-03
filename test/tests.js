@@ -373,6 +373,32 @@ function test_inc() {
     equal(cpu.p.n, 0, "The n flag should be zero to represent a non-negative "+
                       "number.");
   });
+  test("Test INC absolute for 8-bit memory/accumulator mode", function() {
+    var cpu = new CPU_65816();
+    cpu.load_binary("18fba9fe8d0070ee0070af0070", 0x8000);
+    cpu.execute(0x8000);
+    equal(cpu.r.a, 0xff, "The accumulator should be 0xff after loading "+
+                          "from memory a value that was originally 0xfe "+
+                          "and incremented by one.");
+    equal(cpu.p.e, 0, "The hidden e flag should be zero for native mode.");
+    equal(cpu.p.m, 1, "The m flag should be one for 8-bit "+
+                      "memory/accumulator mode.");
+    equal(cpu.p.z, 0, "The z flag should be zero for a non-zero number.");
+    equal(cpu.p.n, 1, "The n flag should be one for a negative number.");
+  });
+  test("Test INC absolute for 16-bit memory/accumulator mode.", function() {
+    var cpu = new CPU_65816();
+    cpu.load_binary("18fbc220a9feff8d0070ee0070af0070", 0x8000);
+    cpu.execute(0x8000);
+    equal(cpu.r.a, 0xffff, "The accumulator should be 0xffff after loading "+
+                           "from memory a value that was originally 0xfffe "+
+                           "and incremented by one.");
+    equal(cpu.p.e, 0, "The hidden e flag should be zero for native mode.");
+    equal(cpu.p.m, 0, "The m flag should be zero for 16-bit "+
+                      "memory/accumulator mode.");
+    equal(cpu.p.z, 0, "The z flag should be zero for a non-zero number.");
+    equal(cpu.p.n, 1, "The n flag should be one for a negative number.");
+  });
 }
 
 function test_inx() {
