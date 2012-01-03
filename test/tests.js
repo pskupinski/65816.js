@@ -19,6 +19,7 @@ function run_tests() {
   test_inc();
   test_inx();
   test_iny();
+  test_dec();
   test_stz();
   test_rep();
   test_sep();
@@ -489,6 +490,60 @@ function test_iny() {
     equal(cpu.p.x, 0, "The x flag of the p status register should be zero "+
                       "for 16-bit index register mode.");
     equal(cpu.p.e, 0, "The hidden e flag should be zero for native mode.");
+  });
+}
+
+function test_dec() {
+  module("DEC");
+  test("Test DEC accumulator for 8-bit memory/accumulator mode.", function() {
+    var cpu = new CPU_65816();
+    cpu.load_binary("18fba9013a", 0x8000);
+    cpu.execute(0x8000);
+    equal(cpu.r.a, 0, "The accumulator should be zero after decrementing "+
+                      "one by one.");
+    equal(cpu.p.e, 0, "The hidden e flag should be zero for native mode.");
+    equal(cpu.p.m, 1, "The m flag should be one for 8-bit "+
+                      "memory/accumulator mode.");
+    equal(cpu.p.z, 1, "The z flag should be one for zero.");
+    equal(cpu.p.n, 0, "The n flag should be zero for a non-negative number.");
+  });
+  test("Test DEC accumulator decrementing zero by one behavior for 8-bit "+
+       "memory/accumulator mode.", function() {
+    var cpu = new CPU_65816();
+    cpu.load_binary("18fba9003a", 0x8000);
+    cpu.execute(0x8000);
+    equal(cpu.r.a, 0xff, "The accumulator should be 0xff after decrementing "+
+                         "zero by one.");
+    equal(cpu.p.e, 0, "The hidden e flag should be zero for native mode.");
+    equal(cpu.p.m, 1, "The m flag should be one for 8-bit "+
+                      "memory/accumulator mode.");
+    equal(cpu.p.z, 0, "The z flag should be zero for a non-zero number.");
+    equal(cpu.p.n, 1, "The n flag should be one for a negative number.");
+  });
+  test("Test DEC accumulator for 16-bit memory/accumulator mode.", function() {
+    var cpu = new CPU_65816();
+    cpu.load_binary("18fbc220a901003a", 0x8000);
+    cpu.execute(0x8000);
+    equal(cpu.r.a, 0, "The accumulator should be zero after decrementing "+
+                      "one by one.");
+    equal(cpu.p.e, 0, "The hidden e flag should be zero for native mode.");    
+    equal(cpu.p.m, 0, "The m flag should be zero for 16-bit "+
+                      "memory/accumulator mode.");
+    equal(cpu.p.z, 1, "The z flag should be one for zero.");
+    equal(cpu.p.n, 0, "The n flag should be zero for a non-negative number.");
+  });
+  test("Test DEC accumulator decrementing zero by one behavior for 16-bit "+
+       "memory/accumulator mode.", function() {
+    var cpu = new CPU_65816(); 
+    cpu.load_binary("18fbc220a900003a", 0x8000);
+    cpu.execute(0x8000);
+    equal(cpu.r.a, 0xffff, "The accumulator should be 0xffff after "+
+                           "decrementing zero by one.");
+    equal(cpu.p.e, 0, "The hidden e flag should be zero for native mode.");
+    equal(cpu.p.m, 0, "The m flag sholud be zero for 16-bit "+
+                      "memory/accumulator mode.");
+    equal(cpu.p.z, 0, "The z flag should be zero for a non-zero number.");
+    equal(cpu.p.n, 1, "The n flag should be one for a negative number.");
   });
 }
 

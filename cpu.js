@@ -29,7 +29,10 @@ var cpu_lib = {
     }
   },
   inc: {
-    Inc_register: function(register, flag) {
+    INC_register: function(register, flag, value) {
+      if(typeof value === 'undefined')
+        value = 1;
+
       this.bytes_required = function() {
         return 1;
       };
@@ -37,7 +40,7 @@ var cpu_lib = {
       this.execute = function(cpu) {
         cpu.cycle_count+=2;
 
-        cpu.r[register]++;
+        cpu.r[register]+=value;
 
         if(cpu.p.e||cpu.p[flag]) {
           cpu.r[register] &= 0xff;
@@ -50,17 +53,20 @@ var cpu_lib = {
         cpu_lib.r.p.check_z(cpu, cpu.r[register]);
       };
     },
-    INC_memory: function() {
+    INC_memory: function(value) {
+      if(typeof value === 'undefined')
+        value = 1;
+
       this.execute = function(cpu, bytes, extra) {
         cpu.cycle_count+=4;
 
         if(cpu.p.e||cpu.p.m) {
-          temp = (bytes[0] + 1) & 0xff;
+          temp = (bytes[0] + value) & 0xff;
           cpu.p.n = temp >> 7;
           cpu.mmu.store_byte(extra.memory_location, temp);
         } else {
           cpu.cycle_count+=2;
-          temp = ((bytes[1]<<8)|bytes[0]) + 1;
+          temp = (((bytes[1]<<8)|bytes[0]) + value) & 0xffff;
           cpu.p.n = temp >> 15;
           cpu.mmu.store_word(extra.memory_location, temp);
         }
@@ -3038,264 +3044,31 @@ var LDY_direct_page = new cpu_lib.addressing.Direct_page(LDY_const);
 var LDY_direct_page_indexed_x =
   new cpu_lib.addressing.Direct_page_indexed_x(LDY_direct_page);
 
-var DEX = {
-  bytes_required:function() {
-    return 1;
-  },
-  execute:function(cpu) {
-    cpu.cycle_count+=2;
+// Implement the decrement instructions as increment instructions that 
+// increment by negative one.
+var DEX = new cpu_lib.inc.INC_register('x', 'x', -1);
 
-    if(cpu.r.x===0) {
-      if(cpu.p.e||cpu.p.x) {
-        cpu.r.x = 0xff;
-      } else {
-        cpu.r.x = 0xffff;
-      }
-      cpu.p.n = 1;
-      cpu.p.z = 0;
-    } else {
-      cpu.r.x--;
-      if(cpu.p.e||cpu.p.x) {
-        cpu.p.n = cpu.r.x >> 7;
-      } else {
-        cpu.p.n = cpu.r.x >> 15;
-      }
+var DEY = new cpu_lib.inc.INC_register('y', 'x', -1);
 
-      cpu_lib.r.p.check_z(cpu, cpu.r.x);
-    }
-  }
-};
+var DEC_accumulator = new cpu_lib.inc.INC_register('a', 'm', -1);
 
-var DEY = {
-  bytes_required:function() {
-    return 1;
-  },
-  execute:function(cpu) {
-    cpu.cycle_count+=2;
+var DEC_memory = new cpu_lib.inc.INC_memory(-1);
 
-    if(cpu.r.y===0) {
-      if(cpu.p.e||cpu.p.x) {
-        cpu.r.y = 0xff;
-      } else {
-        cpu.r.y = 0xffff;
-      }
-      cpu.p.n = 1;
-      cpu.p.z = 0;
-    } else {
-      cpu.r.y--;
+var DEC_absolute = new cpu_lib.addressing.Absolute(DEC_memory);
 
-      if(cpu.p.e||cpu.p.x) {
-        cpu.p.n = cpu.r.y >> 7;
-      } else {
-        cpu.p.n = cpu.r.y >> 15;
-      }
+var DEC_absolute_indexed_x =
+  new cpu_lib.addressing.Absolute_indexed_x(DEC_absolute, true);
 
-      cpu_lib.r.p.check_z(cpu, cpu.r.y);
-    }
-  }
-};
+var DEC_direct_page = new cpu_lib.addressing.Direct_page(DEC_memory);
 
-var DEC_accumulator = {
-  bytes_required: function() {
-    return 1;
-  },
-  execute: function(cpu) {
-    cpu.cycle_count+=2;
+var DEC_direct_page_indexed_x =
+  new cpu_lib.addressing.Direct_page_indexed_x(DEC_direct_page);
 
-    if(cpu.r.a===0) {
-      if(cpu.p.e||cpu.p.m) {
-        cpu.r.a = 0xff;
-      } else {
-        cpu.r.a = 0xffff;
-      }
-      cpu.p.n = 1;
-      cpu.p.z = 0;
-    } else {
-      cpu.r.a--;
-      if(cpu.p.e||cpu.p.m) {
-        cpu.r.a &= 0xff;
-        cpu.p.n = cpu.r.a >> 7;
-      } else {
-        cpu.r.a &= 0xffff;
-        cpu.p.n = cpu.r.a >> 15;
-      }
+var INX = new cpu_lib.inc.INC_register('x', 'x');
 
-      cpu_lib.r.p.check_z(cpu, cpu.r.a);
-    }
-  }
-};
+var INY = new cpu_lib.inc.INC_register('y', 'x');
 
-var DEC_absolute = {
-  bytes_required: function() {
-    return 3;
-  },
-  execute: function(cpu, bytes) {
-    cpu.cycle_count+=6;
-
-    var memory_location = (bytes[1]<<8)|bytes[0],
-        temp;
-    if(cpu.p.e||cpu.p.m) {
-      temp = cpu.mmu.read_byte(memory_location);
-      if(temp===0) {
-        cpu.mmu.store_byte(memory_location, 0xff);
-        cpu.p.n = 1;
-        cpu.p.z = 0;
-      } else {
-        temp--;
-        cpu.mmu.store_byte(memory_location, temp);
-        cpu.p.n = temp >> 7;
-        cpu_lib.r.p.check_z(cpu, temp);
-      }
-    } else {
-      cpu.cycle_count+=2;
-
-      temp = cpu.mmu.read_word(memory_location);
-      if(temp===0) {
-        temp = 0xffff;
-        cpu.p.n = 1;
-        cpu.p.z = 0;
-      } else {
-        temp--;
-        cpu.p.n = temp >> 15;
-        cpu_lib.r.p.check_z(cpu, temp);
-      }
-
-      cpu.mmu.store_word(memory_location, temp);
-    }
-  }
-};
-
-var DEC_absolute_indexed_x = {
-  bytes_required: function() {
-    return 3;
-  },
-  execute: function(cpu, bytes) {
-    cpu.cycle_count+=7;
-
-    var memory_location = ((bytes[1]<<8)|bytes[0]) + cpu.r.x,
-        temp;
-    if(cpu.p.e||cpu.p.m) {
-      temp = cpu.mmu.read_byte(memory_location);
-      if(temp===0) {
-        cpu.mmu.store_byte(memory_location, 0xff);
-        cpu.p.n = 1;
-        cpu.p.z = 0;
-      } else {
-        temp--;
-        cpu.mmu.store_byte(memory_location, temp);
-        cpu.p.n = temp >> 7;
-        cpu_lib.r.p.check_z(cpu, temp);
-      }
-    } else {
-      cpu.cycle_count+=2;
-
-      temp = cpu.mmu.read_word(memory_location);
-      if(temp===0) {
-        temp = 0xffff;
-        cpu.p.n = 1;
-        cpu.p.z = 0;
-      } else {
-        temp--;
-        cpu.p.n = temp >> 15;
-        cpu_lib.r.p.check_z(cpu, temp);
-      }
-
-      cpu.mmu.store_word(memory_location, temp);
-    }
-  }
-};
-
-var DEC_direct_page = {
-  bytes_required: function() {
-    return 2;
-  },
-  execute: function(cpu, bytes) {
-    cpu.cycle_count+=5;
-
-    if((cpu.r.d&0xff)!==0)
-      cpu.cycle_count++;
-
-    var memory_location = bytes[0] + cpu.r.d,
-        temp;
-    if(cpu.p.e||cpu.p.m) {
-      temp = cpu.mmu.read_byte(memory_location);
-      if(temp===0) {
-        cpu.mmu.store_byte(memory_location, 0xff);
-        cpu.p.n = 1;
-        cpu.p.z = 0;
-      } else {
-        temp--;
-        cpu.mmu.store_byte(memory_location, temp);
-        cpu.p.n = temp >> 7;
-        cpu_lib.r.p.check_z(cpu, temp);
-      }
-    } else {
-      cpu.cycle_count+=2;
-
-      temp = cpu.mmu.read_word(memory_location);
-      if(temp===0) {
-        temp = 0xffff;
-        cpu.p.n = 1;
-        cpu.p.z = 0;
-      } else {
-        temp--;
-        cpu.p.n = temp >> 15;
-        cpu_lib.r.p.check_z(cpu, temp);
-      }
-
-      cpu.mmu.store_word(memory_location, temp);
-    }
-  }
-};
-
-var DEC_direct_page_indexed_x = {
-  bytes_required: function() {
-    return 2;
-  },
-  execute: function(cpu, bytes) {
-    cpu.cycle_count+=6;
-
-    if((cpu.r.d&0xff)!==0)
-      cpu.cycle_count++;
-
-    var memory_location = bytes[0] + cpu.r.d + cpu.r.x,
-        temp;
-    if(cpu.p.e||cpu.p.m) {
-      temp = cpu.mmu.read_byte(memory_location);
-      if(temp===0) {
-        cpu.mmu.store_byte(memory_location, 0xff);
-        cpu.p.n = 1;
-        cpu.p.z = 0;
-      } else {
-        temp--;
-        cpu.mmu.store_byte(memory_location, temp);
-        cpu.p.n = temp >> 7;
-        cpu_lib.r.p.check_z(cpu, temp);
-      }
-    } else {
-      cpu.cycle_count+=2;
-
-      temp = cpu.mmu.read_word(memory_location);
-      if(temp===0) {
-        temp = 0xffff;
-        cpu.p.n = 1;
-        cpu.p.z = 0;
-      } else {
-        temp--;
-        cpu.p.n = temp >> 15;
-        cpu_lib.r.p.check_z(cpu, temp);
-      }
-
-      cpu.mmu.store_word(memory_location, temp);
-    }
-  }
-};
-
-var INX = new cpu_lib.inc.Inc_register('x', 'x');
-
-var INY = new cpu_lib.inc.Inc_register('y', 'x');
-
-var INC_accumulator = new cpu_lib.inc.Inc_register('a', 'm');
+var INC_accumulator = new cpu_lib.inc.INC_register('a', 'm');
 
 var INC_memory = new cpu_lib.inc.INC_memory();
 
