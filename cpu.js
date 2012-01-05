@@ -28,6 +28,34 @@ var cpu_lib = {
       }
     }
   },
+  branch: {
+    Branch: function(flag, branch_on) {
+      var always_branch = typeof flag === 'undefined';
+      this.bytes_required = function() {
+        return 2;
+      },
+      this.execute = function(cpu, bytes) {
+        cpu.cycle_count+=3;
+        if(cpu.p.e)
+          cpu.cycle_count++;
+
+        if(always_branch||(cpu.p[flag]==branch_on)) {
+          if(!always_branch)
+            cpu.cycle_count++;
+
+          // Handle single byte two's complement numbers as the branch argument.
+          if(bytes[0]<=127) {
+            cpu.r.pc+=bytes[0];
+            cpu.r.pc&=0xffff;
+          } else {
+            cpu.r.pc-=256-bytes[0];
+            if(cpu.r.pc<0)
+              cpu.r.pc+=0xffff;
+          }
+        }
+      }
+    }
+  },
   inc: {
     INC_register: function(register, flag, value) {
       if(typeof value === 'undefined')
@@ -2174,236 +2202,23 @@ var ADC_stack_relative = new cpu_lib.addressing.Stack_relative(ADC_const);
 var ADC_stack_relative_indirect_indexed_y =
   new cpu_lib.addressing.Stack_relative_indirect_indexed_y(ADC_const);
 
-var BMI = {
-  bytes_required:function() {
-    return 2;
-  },
-  execute:function(cpu, bytes) {
-    cpu.cycle_count+=2;
+var BMI = new cpu_lib.branch.Branch('n', true);
 
-    if(cpu.p.e)
-      cpu.cycle_count++;
+var BPL = new cpu_lib.branch.Branch('n', false);
 
-    if(cpu.p.n) {
-      cpu.cycle_count++;
+var BVC = new cpu_lib.branch.Branch('v', false);
 
-      // Handle single byte two's complement numbers as the branch argument.
-      if(bytes[0]<=127) {
-        cpu.r.pc+=bytes[0];
-        cpu.r.pc&=0xffff;
-      } else {
-        cpu.r.pc-=256-bytes[0];
-        if(cpu.r.pc<0)
-          cpu.r.pc+=0xffff;
-      }
-    }
-  }
-};
+var BVS = new cpu_lib.branch.Branch('v', true);
 
-var BPL = {
-  bytes_required:function() {
-    return 2;
-  },
-  execute:function(cpu, bytes) {
-    cpu.cycle_count+=2;
+var BCC = new cpu_lib.branch.Branch('c', false);
 
-    if(cpu.p.e)
-      cpu.cycle_count++;
+var BCS = new cpu_lib.branch.Branch('c', true);
 
-    if(!cpu.p.n) {
-      cpu.cycle_count++;
+var BEQ = new cpu_lib.branch.Branch('z', true);
 
-      // Handle single byte two's complement numbers as the branch argument.
-      if(bytes[0]<=127) {
-        cpu.r.pc+=bytes[0];
-        cpu.r.pc&=0xffff;
-      } else {
-        cpu.r.pc-=256-bytes[0];
-        if(cpu.r.pc<0)
-          cpu.r.pc+=0xffff;
-      }
-    }
-  }
-};
+var BNE = new cpu_lib.branch.Branch('z', false);
 
-var BVC = {
-  bytes_required:function() {
-    return 2;
-  },
-  execute:function(cpu, bytes) {
-    cpu.cycle_count+=2;
-
-    if(cpu.p.e)
-      cpu.cycle_count++;
-
-    if(!cpu.p.v) {
-      cpu.cycle_count++;
-
-      // Handle single byte two's complement numbers as the branch argument.
-      if(bytes[0]<=127) {
-        cpu.r.pc+=bytes[0];
-        cpu.r.pc&=0xffff;
-      } else {
-        cpu.r.pc-=256-bytes[0];
-        if(cpu.r.pc<0)
-          cpu.r.pc+=0xffff;
-      }
-    }
-  }
-};
-
-
-var BVS = {
-  bytes_required:function() {
-    return 2;
-  },
-  execute:function(cpu, bytes) {
-    cpu.cycle_count+=2;
-
-    if(cpu.p.e)
-      cpu.cycle_count++;
-
-    if(cpu.p.v) {
-      cpu.cycle_count++;
-
-      // Handle single byte two's complement numbers as the branch argument.
-      if(bytes[0]<=127) {
-        cpu.r.pc+=bytes[0];
-        cpu.r.pc&=0xffff;
-      } else {
-        cpu.r.pc-=256-bytes[0];
-        if(cpu.r.pc<0)
-          cpu.r.pc+=0xffff;
-      }
-    }
-  }
-};
-
-var BCC = {
-  bytes_required:function() {
-    return 2;
-  },
-  execute:function(cpu, bytes) {
-    cpu.cycle_count+=2;
-
-    if(cpu.p.e)
-      cpu.cycle_count++;
-
-    if(!cpu.p.c) {
-      cpu.cycle_count++;
-
-      // Handle single byte two's complement numbers as the branch argument.
-      if(bytes[0]<=127) {
-        cpu.r.pc+=bytes[0];
-        cpu.r.pc&=0xffff;
-      } else {
-        cpu.r.pc-=256-bytes[0];
-        if(cpu.r.pc<0)
-          cpu.r.pc+=0xffff;
-      }
-    }
-  }
-};
-
-var BCS = {
-  bytes_required:function() {
-    return 2;
-  },
-  execute:function(cpu, bytes) {
-    cpu.cycle_count+=2;
-
-    if(cpu.p.e)
-      cpu.cycle_count++;
-
-    if(cpu.p.c) {
-      cpu.cycle_count++;
-
-      // Handle single byte two's complement numbers as the branch argument.
-      if(bytes[0]<=127) {
-        cpu.r.pc+=bytes[0];
-        cpu.r.pc&=0xffff;
-      } else {
-        cpu.r.pc-=256-bytes[0];
-        if(cpu.r.pc<0)
-          cpu.r.pc+=0xffff;
-      }
-    }
-  }
-};
-
-var BEQ = {
-  bytes_required:function() {
-    return 2;
-  },
-  execute:function(cpu, bytes) {
-    cpu.cycle_count+=2;
-
-    if(cpu.p.e)
-      cpu.cycle_count++;
-
-    if(cpu.p.z) {
-      cpu.cycle_count++;
-
-      // Handle single byte two's complement numbers as the branch argument.
-      if(bytes[0]<=127) {
-        cpu.r.pc+=bytes[0];
-        cpu.r.pc&=0xffff;
-      } else {
-        cpu.r.pc-=256-bytes[0];
-        if(cpu.r.pc<0)
-          cpu.r.pc+=0xffff;
-      }
-    }
-  }
-};
-
-var BNE = {
-   bytes_required:function() {
-    return 2;
-  },
-  execute:function(cpu, bytes) {
-    cpu.cycle_count+=2;
-
-    if(cpu.p.e)
-      cpu.cycle_count++;
-
-    if(!cpu.p.z) {
-      cpu.cycle_count++;
-
-      // Handle single byte two's complement numbers as the branch argument.
-      if(bytes[0]<=127) {
-        cpu.r.pc+=bytes[0];
-        cpu.r.pc&=0xffff;
-      } else {
-        cpu.r.pc-=256-bytes[0];
-        if(cpu.r.pc<0)
-          cpu.r.pc+=0xffff;
-      }
-    }
-  }
-
-};
-
-var BRA = {
-  bytes_required:function() {
-    return 2;
-  },
-  execute:function(cpu, bytes) {
-    cpu.cycle_count+=3;
-    if(cpu.p.e)
-      cpu.cycle_count++;
-
-    // Handle single byte two's complement numbers as the branch argument.
-    if(bytes[0]<=127) {
-      cpu.r.pc+=bytes[0];
-      cpu.r.pc&=0xffff;
-    } else {
-      cpu.r.pc-=256-bytes[0];
-      if(cpu.r.pc<0)
-        cpu.r.pc+=0xffff;
-    }
-  }
-};
+var BRA = new cpu_lib.branch.Branch();
 
 var BRL = {
   bytes_required:function() {
