@@ -19,6 +19,13 @@
 var cpu_lib = {
   r: {
     p: {
+      Flag_set: function(flag, value) {
+        this.bytes_required = function() { return 1; };
+        this.execute = function(cpu) {
+          cpu.cycle_count+=2;
+          cpu.p[flag] = value;
+        };
+      },
       check_z: function(cpu, val) {
         if(val===0) {
           cpu.p.z = 1;
@@ -3379,67 +3386,19 @@ var XCE = {
   }
 };
 
-var CLC = {
-  bytes_required: function() { return 1; },
-  execute: function(cpu) {
-    cpu.cycle_count+=2;
-    cpu.p.c = 0;
-  }
-};
+var CLC = new cpu_lib.r.p.Flag_set('c', 0);
 
-var SEI = {
-  bytes_required: function() { return 1; },
-  execute: function(cpu) {
-    cpu.cycle_count+=2;
-    cpu.p.i = 1;
-  }
-};
+var SEC = new cpu_lib.r.p.Flag_set('c', 1);
 
-var CLI = {
-  bytes_required: function() { return 1; },
-  execute: function(cpu) {
-    cpu.cycle_count+=2;
-    cpu.p.i = 0;
-  }
-};
+var CLI = new cpu_lib.r.p.Flag_set('i', 0);
 
-var SEC = {
-  bytes_required: function() { return 1; },
-  execute: function(cpu) {
-    cpu.cycle_count+=2;
-    cpu.p.c = 1;
-  }
-};
+var SEI = new cpu_lib.r.p.Flag_set('i', 1);
 
-var CLD = {
-  bytes_required:function() {
-    return 1;
-  },
-  execute:function(cpu) {
-    cpu.cycle_count+=2;
-    cpu.p.d = 0;
-  }
-};
+var CLD = new cpu_lib.r.p.Flag_set('d', 0);
 
-var SED = {
-  bytes_required:function() {
-    return 1;
-  },
-  execute:function(cpu) {
-    cpu.cycle_count+=2;
-    cpu.p.d = 1;
-  }
-};
+var SED = new cpu_lib.r.p.Flag_set('d', 1);
 
-var CLV = {
-  bytes_required:function() {
-    return 1;
-  },
-  execute:function(cpu) {
-    cpu.cycle_count+=2;
-    cpu.p.v = 0;
-  }
-};
+var CLV = new cpu_lib.r.p.Flag_set('v', 0);
 
 var XBA = {
   bytes_required:function() {
