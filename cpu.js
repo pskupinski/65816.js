@@ -19,6 +19,34 @@
 var cpu_lib = {
   r: {
     p: {
+      Set_p: function(value) {
+        this.bytes_required = function() { return 2; };
+        this.execute = function(cpu, bytes) {
+          // TODO: Figure out exactly how behavior differs in emulation mode.
+          cpu.cycle_count+=3;
+
+          var flags = bytes[0].toString(2),
+          ops = { 0: function() { cpu.p.n = value; },
+                  1: function() { cpu.p.v = value; },
+                  2: function() { cpu.p.m = value; },
+                  3: function() { cpu.p.x = value; },
+                  4: function() { cpu.p.d = value; },
+                  5: function() { cpu.p.i = value; },
+                  6: function() { cpu.p.z = value; },
+                  7: function() { cpu.p.c = value; }};
+
+          // Sometimes it cuts off zeros before hand, so add those zeros back.
+          while(flags.length<8) {
+            flags = '0' + flags;
+          }
+
+          for(var i = 0; i < 8; i++) {
+            if(flags.charAt(i)==='1') {
+              ops[i]();
+            }
+          }
+        }
+      },
       Flag_set: function(flag, value) {
         this.bytes_required = function() { return 1; };
         this.execute = function(cpu) {
@@ -3305,63 +3333,9 @@ var LDX_direct_page_indexed_y =
 
 var LDX_absolute = new cpu_lib.addressing.Absolute(LDX_const);
 
-// Set bits in the p status register as specified by 1's in the position
-// that represents each register.
-var SEP = {
-  bytes_required: function() { return 2; },
-  execute: function(cpu, bytes) {
-    // TODO: Figure out exactly how behavior differs in emulation mode.
+var SEP = new cpu_lib.r.p.Set_p(1);
 
-    cpu.cycle_count+=3;
-
-    var flags = bytes[0].toString(2),
-        ops = { 0: function() { cpu.p.n = 1; }, 1: function() { cpu.p.v = 1; },
-            2: function() { cpu.p.m = 1; }, 3: function() { cpu.p.x = 1; },
-            4: function() { cpu.p.d = 1; }, 5: function() { cpu.p.i = 1; },
-            6: function() { cpu.p.z = 1; },
-            7: function() { cpu.p.c = 1; }};
-
-    // Sometimes it cuts off zeros before hand, so add those zeros back.
-    while(flags.length<8) {
-      flags = '0' + flags;
-    }
-
-    for(var i = 0; i < 8; i++) {
-      if(flags.charAt(i)==='1') {
-        ops[i]();
-      }
-    }
-  }
-};
-
-// Clear bits in the p status register as specified by 1's in the position
-// that represents each register.
-var REP = {
-  bytes_required: function() { return 2; },
-  execute: function(cpu, bytes) {
-    // TODO: Figure out exactly how behavior differs in emulation mode.
-
-    cpu.cycle_count+=3;
-
-    var flags = bytes[0].toString(2),
-        ops = { 0: function() { cpu.p.n = 0; }, 1: function() { cpu.p.v = 0; },
-            2: function() { cpu.p.m = 0; }, 3: function() { cpu.p.x = 0; },
-            4: function() { cpu.p.d = 0; }, 5: function() { cpu.p.i = 0; },
-            6: function() { cpu.p.z = 0; },
-            7: function() { cpu.p.c = 0; }};
-
-    // Sometimes it cuts off zeros before hand, so add those zeros back.
-    while(flags.length<8) {
-      flags = '0' + flags;
-    }
-
-    for(var i = 0; i < 8; i++) {
-      if(flags.charAt(i)==='1') {
-        ops[i]();
-      }
-    }
-  }
-};
+var REP = new cpu_lib.r.p.Set_p(0);
 
 var XCE = {
   bytes_required: function() { return 1; },
