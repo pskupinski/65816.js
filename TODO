@@ -8,7 +8,7 @@ Testing:
 - Tests needed for IN* and DE* operations
 - Tests needed for T** transfer operations
 - Tests needed for interrupt support
-- Tests needed for the numerous other operations added
+- Tests needed for the numerous other operations supported
 CPU:
 - Code cleanup
 - Add support for loading a binary using a url
@@ -16,6 +16,10 @@ CPU:
   when decimal mode is set
 - Optimization
   * Use typed arrays if browser supports them
+  * Each instruction should be reponsible for getting what it needs from
+    memory(remove byte acquisition from cpu.step), remove bytes_required from
+    each instruction, and then each instruction should be able to be turned
+    into a function(instructions will no longer be objects)
 Memory:
 - Bank wrapping or not wrapping for certain addressing modes and with certain
   settings
