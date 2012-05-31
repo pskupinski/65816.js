@@ -3937,4 +3937,4 @@ window.CPU_65816 = function() {
     this.cycle_count = 0;
   };
 };
-})(window);
+})(this);
