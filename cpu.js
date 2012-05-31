@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2011, Preston Skupinski <skupinsk@cse.msu.edu>
+ * Copyright (c) 2011-2012, Preston Skupinski <skupinsk@cse.msu.edu>
  *
  * Permission to use, copy, modify, and/or distribute this software for any
  * purpose with or without fee is hereby granted, provided that the above
@@ -3937,4 +3937,5 @@ window.CPU_65816 = function() {
     this.cycle_count = 0;
   };
 };
-})(this);
+})((typeof module !== 'undefined' &&
+    typeof module.exports !== 'undefined')?module.exports:this);
