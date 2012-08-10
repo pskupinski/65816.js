@@ -124,12 +124,12 @@ var cpu_lib = {
         cpu.cycle_count+=4;
 
         if(cpu.p.e||cpu.p.m) {
-          temp = (bytes[0] + value) & 0xff;
+          var temp = (bytes[0] + value) & 0xff;
           cpu.p.n = temp >> 7;
           cpu.mmu.store_byte(extra.memory_location, temp);
         } else {
           cpu.cycle_count+=2;
-          temp = (((bytes[1]<<8)|bytes[0]) + value) & 0xffff;
+          var temp = (((bytes[1]<<8)|bytes[0]) + value) & 0xffff;
           cpu.p.n = temp >> 15;
           cpu.mmu.store_word(extra.memory_location, temp);
         }
