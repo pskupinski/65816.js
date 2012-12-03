@@ -11,6 +11,12 @@ Testing:
 - Tests needed for the numerous other operations supported
 CPU:
 - Code cleanup
+  * Re-evaluate closure based privacy for instructions.  This currently
+    makes it impossible to actually unit test the small bit of functionality
+    the instruction implements.  There has to be a nice way to handle this.
+    - Ideally this should wait till after instructions are altered to grab
+      whatever bytes they need instead of relying on the loop to grab it
+      for them.
 - Add support for loading a binary using a url
 - Figure out the exact details of how the 65816 handles illegal BCD numbers
   when decimal mode is set
