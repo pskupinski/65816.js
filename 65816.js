@@ -68,7 +68,7 @@ var cpu_lib = {
       var always_branch = typeof flag === 'undefined';
       this.bytes_required = function() {
         return 2;
-      },
+      };
       this.execute = function(cpu, bytes) {
         cpu.cycle_count+=3;
         if(cpu.p.e)
@@ -446,8 +446,10 @@ var cpu_lib = {
 
         var memory_location = cpu.r.s + bytes[0];
         if(cpu.p.e) {
-          memory_location = 0x100 | (memory_location & 0xff); 
-        } else if(cpu.p.m) {
+          memory_location = 0x100 | (memory_location & 0xff);
+        }
+
+        if(cpu.p.e || cpu.p.m) {
           instruction.execute(cpu, [cpu.mmu.read_byte(memory_location)]); 
         } else {
           instruction.execute(cpu, [cpu.mmu.read_byte(memory_location),
@@ -1018,7 +1020,7 @@ var PLB = {
 
     cpu.r.dbr = cpu.mmu.pull_byte();
     cpu.p.n = cpu.r.dbr >> 7;
-    cpu_lib.r.p.check_z(cpu.r.dbr);
+    cpu_lib.r.p.check_z(cpu, cpu.r.dbr);
   }
 };
 
@@ -3285,9 +3287,6 @@ var LDA_stack_relative = new cpu_lib.addressing.Stack_relative(LDA_const);
 var LDA_stack_relative_indirect_indexed_y =
   new cpu_lib.addressing.Stack_relative_indirect_indexed_y(LDA_const);
 
-var LDX_absolute_indexed_y =
-  new cpu_lib.addressing.Absolute_indexed_y(LDX_absolute);
-
 var LDA_absolute_long = new cpu_lib.addressing.Absolute_long(LDA_const);
 
 var LDA_absolute_long_indexed_x =
@@ -3332,6 +3331,9 @@ var LDX_direct_page_indexed_y =
   new cpu_lib.addressing.Direct_page_indexed(LDX_direct_page, 'y');
 
 var LDX_absolute = new cpu_lib.addressing.Absolute(LDX_const);
+
+var LDX_absolute_indexed_y =
+    new cpu_lib.addressing.Absolute_indexed_y(LDX_absolute);
 
 var SEP = new cpu_lib.r.p.Set_p(1);
 
@@ -3520,7 +3522,7 @@ var MMU = function() {
       this.store_byte(memory_location, word_or_low_byte&0xff);
       this.store_byte(memory_location+1, word_or_low_byte>>8);
     } else {
-      this.store_byte(memory_location, low_byte);
+      this.store_byte(memory_location, word_or_low_byte);
       this.store_byte(memory_location+1, high_byte);
     }
   };
@@ -3532,7 +3534,7 @@ var MMU = function() {
       this.store_byte_long(memory_location, bank, word_or_low_byte&0xff);
       this.store_byte_long(memory_location+1, bank, word_or_low_byte>>8);
     } else {
-      this.store_byte_long(memory_location, bank, low_byte);
+      this.store_byte_long(memory_location, bank, word_or_low_byte);
       this.store_byte_long(memory_location+1, bank, high_byte);
     }
   };
