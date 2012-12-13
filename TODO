@@ -17,7 +17,6 @@ CPU:
     - Ideally this should wait till after instructions are altered to grab
       whatever bytes they need instead of relying on the loop to grab it
       for them.
-- Add support for loading a binary using a url
 - Figure out the exact details of how the 65816 handles illegal BCD numbers
   when decimal mode is set
 - Optimization
@@ -32,6 +31,7 @@ Memory:
 - Page wrapping or not wrapping for certain addressing modes and with certain
   settings
 Display:
+- Add support for loading a binary using a url
 - Add the ability to step, pause and stop execution
 - Ability to view the path of operation execution as it executes, like have
   the hex chars that are being interpreted at the moment highlighted
