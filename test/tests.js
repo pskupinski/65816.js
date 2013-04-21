@@ -688,8 +688,8 @@ function test_mvn_and_mvp() {
                 "register should be 0x0ffe.");
     strictEqual(cpu.r.y, 0x1ffe, "After executing the example program the y "+
                 "register should be 0x1ffe.");  
-    var byte_one = cpu.mmu.read_byte(0x1fff);
-    var byte_two = cpu.mmu.read_byte(0x2000);
+    var byte_one = cpu.memory.read_byte(0x1fff);
+    var byte_two = cpu.memory.read_byte(0x2000);
     strictEqual(byte_one, 0xab, "After executing the example program 0x001fff "+                "in memory should contain 0xab.");
     strictEqual(byte_two, 0xcd, "After executing the example program 0x002000 "+
                 "in memory should contain 0xcd.");
@@ -1401,15 +1401,15 @@ function test_cpu_load_binary() {
   test("Make sure that load binary can work with hex strings", function() {
     var cpu = new CPU_65816();    
     cpu.load_binary("18fb", 0x8000);
-    strictEqual(cpu.mmu.read_byte_long(0x8000, cpu.r.k), 0x18);
-    strictEqual(cpu.mmu.read_byte_long(0x8001, cpu.r.k), 0xfb);
+    strictEqual(cpu.memory.read_byte_long(0x8000, cpu.r.k), 0x18);
+    strictEqual(cpu.memory.read_byte_long(0x8001, cpu.r.k), 0xfb);
   });
 
   test("Make sure that load_binary can work with arrays", function() {
     var cpu = new CPU_65816();    
     cpu.load_binary([0x18, 0xfb], 0x8000);
-    strictEqual(cpu.mmu.read_byte_long(0x8000, cpu.r.k), 0x18);
-    strictEqual(cpu.mmu.read_byte_long(0x8001, cpu.r.k), 0xfb);
+    strictEqual(cpu.memory.read_byte_long(0x8000, cpu.r.k), 0x18);
+    strictEqual(cpu.memory.read_byte_long(0x8001, cpu.r.k), 0xfb);
   });
 }
 
@@ -1422,7 +1422,7 @@ function test_cpu_memory_mapped_io_devices() {
         write_callback = function(cpu, b) {
           written_value = b;
         };
-    cpu.mmu.add_memory_mapped_io_device(write_callback, null, 0, 1); 
+    cpu.memory.add_memory_mapped_io_device(write_callback, null, 0, 1); 
     cpu.load_binary("a9ff8501", 0x8000);
     cpu.execute(0x8000); 
     strictEqual(written_value, 0xff);
@@ -1435,7 +1435,7 @@ function test_cpu_memory_mapped_io_devices() {
         read_callback = function(cpu) {
           return read_value;
         };
-    cpu.mmu.add_memory_mapped_io_device(null, read_callback, 0, 1);
+    cpu.memory.add_memory_mapped_io_device(null, read_callback, 0, 1);
     cpu.load_binary("a501", 0x8000);
     cpu.execute(0x8000);
     strictEqual(cpu.r.a, read_value, "The accumulator should equal the value "+
