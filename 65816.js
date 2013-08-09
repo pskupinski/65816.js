@@ -20,7 +20,7 @@ var cpu_lib = {
   r: {
     p: {
       Set_p: function(value) {
-        this.bytes_required = function() { return 2; };
+        this.bytes_required = 2;
         this.execute = function(cpu, bytes) {
           // TODO: Figure out exactly how behavior differs in emulation mode.
           cpu.cycle_count+=3;
@@ -48,7 +48,7 @@ var cpu_lib = {
         }
       },
       Flag_set: function(flag, value) {
-        this.bytes_required = function() { return 1; };
+        this.bytes_required = 1;
         this.execute = function(cpu) {
           cpu.cycle_count+=2;
           cpu.p[flag] = value;
@@ -66,9 +66,9 @@ var cpu_lib = {
   branch: {
     Branch: function(flag, branch_on) {
       var always_branch = typeof flag === 'undefined';
-      this.bytes_required = function() {
-        return 2;
-      };
+
+      this.bytes_required = 2;
+
       this.execute = function(cpu, bytes) {
         cpu.cycle_count+=3;
         if(cpu.p.e)
@@ -96,9 +96,7 @@ var cpu_lib = {
       if(typeof value === 'undefined')
         value = 1;
 
-      this.bytes_required = function() {
-        return 1;
-      };
+      this.bytes_required = 1;
 
       this.execute = function(cpu) {
         cpu.cycle_count+=2;
@@ -139,9 +137,7 @@ var cpu_lib = {
   },
   addressing: {
     Direct_page: function(instruction) {
-      this.bytes_required = function() {
-        return 2;
-      };
+      this.bytes_required = 2;
 
       this.execute = function(cpu, bytes) {
         cpu.cycle_count++;
@@ -161,9 +157,7 @@ var cpu_lib = {
       };
     },
     Direct_page_indexed_x_indirect: function(instruction) {
-      this.bytes_required = function() {
-        return 2;
-      };
+      this.bytes_required = 2;
 
       this.execute = function(cpu, bytes) {
         cpu.cycle_count+=4;
@@ -203,9 +197,7 @@ var cpu_lib = {
       };
     },
     Direct_page_indirect: function(instruction) {
-      this.bytes_required = function() {
-        return 2;
-      }; 
+      this.bytes_required = 2;
 
       this.execute = function(cpu, bytes) {
         cpu.cycle_count+=3;
@@ -226,9 +218,7 @@ var cpu_lib = {
       };
     },
     Direct_page_indirect_indexed_y: function(instruction) {
-      this.bytes_required = function() {
-        return 2;
-      };
+      this.bytes_required = 2;
 
       this.execute = function(cpu, bytes) {
         cpu.cycle_count+=3; 
@@ -254,9 +244,7 @@ var cpu_lib = {
       };
     },
     Direct_page_indirect_long: function(instruction) {
-      this.bytes_required = function() {
-        return 2;
-      };
+      this.bytes_required = 2;
 
       this.execute = function(cpu, bytes) {
         cpu.cycle_count+=4;
@@ -281,9 +269,7 @@ var cpu_lib = {
       };
     },
     Direct_page_indirect_long_indexed_y: function(instruction) {
-      this.bytes_required = function() {
-        return 2;
-      };
+      this.bytes_required = 2;
 
       this.execute = function(cpu, bytes) {
         cpu.cycle_count+=4;
@@ -317,9 +303,7 @@ var cpu_lib = {
       };
     },
     Absolute: function(instruction) {
-      this.bytes_required = function() {
-        return 3;
-      };
+      this.bytes_required = 3;
 
       this.execute = function(cpu, bytes) {
         cpu.cycle_count+=2;
@@ -336,9 +320,7 @@ var cpu_lib = {
       };
     },
     Absolute_long: function(instruction) {
-      this.bytes_required = function() {
-        return 4;
-      };
+      this.bytes_required = 4;
 
       this.execute = function(cpu, bytes) {
         cpu.cycle_count+=3;
@@ -358,9 +340,7 @@ var cpu_lib = {
       };
     },
     Absolute_long_indexed_x: function(instruction) {
-      this.bytes_required = function() {
-        return 4;
-      };
+      this.bytes_required = 4;
 
       this.execute = function(cpu, bytes) {
         cpu.cycle_count+=3;
@@ -389,9 +369,7 @@ var cpu_lib = {
       };
     },
     Absolute_indexed_x: function(absolute_instruction, other) {
-      this.bytes_required = function() {
-        return 3;
-      };
+      this.bytes_required = 3;
 
       this.execute = function(cpu, bytes) {
         var memory_location;
@@ -410,9 +388,7 @@ var cpu_lib = {
       };
     },
     Absolute_indexed_y: function(absolute_instruction) {
-      this.bytes_required = function() {
-        return 3;
-      };
+      this.bytes_required = 3;
 
       this.execute = function(cpu, bytes) {
         var initial_location = (bytes[1]<<8)|bytes[0],
@@ -426,9 +402,7 @@ var cpu_lib = {
       };
     },
     Direct_page_indexed: function(direct_page_instruction, register) {
-      this.bytes_required = function() {
-        return 2;
-      }; 
+      this.bytes_required = 2;
 
       this.execute = function(cpu, bytes) {
         cpu.cycle_count++;
@@ -437,9 +411,7 @@ var cpu_lib = {
       };
     },
     Stack_relative: function(instruction) {
-      this.bytes_required = function() {
-        return 2;
-      };
+      this.bytes_required = 2;
 
       this.execute = function(cpu, bytes) {
         cpu.cycle_count+=2;
@@ -458,9 +430,7 @@ var cpu_lib = {
       };
     },
     Stack_relative_indirect_indexed_y: function(instruction) {
-      this.bytes_required = function() {
-        return 2;
-      };
+      this.bytes_required = 2;
  
       this.execute = function(cpu, bytes) {
         cpu.cycle_count+=5;
@@ -517,9 +487,8 @@ var cpu_lib = {
 };
 
 var STP = {
-  bytes_required:function() {
-    return 1;
-  },
+  bytes_required:1,
+
   execute:function(cpu) {
     cpu.cycle_count+=3;
 
@@ -528,9 +497,8 @@ var STP = {
 };
 
 var WAI = {
-  bytes_required:function() {
-    return 1;
-  },
+  bytes_required:1,
+
   execute:function(cpu) {
     cpu.cycle_count+=3;
 
@@ -539,16 +507,13 @@ var WAI = {
 };
 
 var WDM = {
-  bytes_required:function() {
-    return 2;
-  },
+  bytes_required:2,
+
   execute:function() {}
 };
 
 var TXS = {
-  bytes_required:function() {
-    return 1;
-  },
+  bytes_required:1,
   execute:function(cpu) {
     cpu.cycle_count+=2;
     cpu.r.s = cpu.r.x;
@@ -562,9 +527,7 @@ var TXS = {
 };
 
 var TSX = {
-  bytes_required:function() {
-    return 1;
-  },
+  bytes_required:1,
   execute:function(cpu) {
     cpu.cycle_count+=2;
     if(cpu.p.e||cpu.p.x) {
@@ -579,9 +542,8 @@ var TSX = {
 };
 
 var TRB_absolute = {
-  bytes_required:function() {
-    return 3;
-  },
+  bytes_required:3,
+
   execute:function(cpu, bytes) {
     cpu.cycle_count+=6;
 
@@ -603,9 +565,8 @@ var TRB_absolute = {
 };
 
 var TRB_direct_page = {
-  bytes_required:function() {
-    return 2;
-  },
+  bytes_required:2,
+
   execute:function(cpu, bytes) {
     cpu.cycle_count+=5;
 
@@ -630,9 +591,8 @@ var TRB_direct_page = {
 };
 
 var TSB_absolute = {
-  bytes_required:function() {
-    return 3;
-  },
+  bytes_required:3,
+
   execute:function(cpu, bytes) {
     cpu.cycle_count+=6;
 
@@ -654,9 +614,8 @@ var TSB_absolute = {
 };
 
 var TSB_direct_page = {
-  bytes_required:function() {
-    return 2;
-  },
+  bytes_required:2,
+
   execute:function(cpu, bytes) {
     cpu.cycle_count+=5;
 
@@ -717,9 +676,8 @@ var BIT_absolute_indexed_x =
   new cpu_lib.addressing.Absolute_indexed_x(BIT_absolute);
 
 var COP = {
-  bytes_required:function() {
-    return 2;
-  },
+  bytes_required:2,
+
   execute:function(cpu) {
     cpu.cycle_count+=7;
 
@@ -731,9 +689,8 @@ var COP = {
 };
 
 var BRK = {
-  bytes_required:function() {
-    return 2;
-  },
+  bytes_required:2,
+
   execute:function(cpu) {
     cpu.cycle_count+=7;
 
@@ -747,9 +704,8 @@ var BRK = {
 };
 
 var RTI = {
-  bytes_required:function() {
-    return 1;
-  },
+  bytes_required:1,
+
   execute:function(cpu) {
     cpu.cycle_count+=6;
 
@@ -779,9 +735,8 @@ var RTI = {
 // MVN is a really weird instruction, until the accumulator underflows MVN
 // will keep decrementing the program counter to have it continue to execute.
 var MVN = {
-  bytes_required:function() {
-    return 3;
-  },
+  bytes_required:3,
+
   execute:function(cpu, bytes) {
     cpu.cycle_count+=7;
 
@@ -818,9 +773,8 @@ var MVN = {
 // MVP is a really weird instruction, until the accumulator reaches $FFFF MVP
 // will keep decrementing the program counter to have it continue to execute.
 var MVP = {
-  bytes_required:function() {
-    return 3;
-  },
+  bytes_required:3,
+
   execute:function(cpu, bytes) {
     cpu.cycle_count+=7;
 
@@ -865,9 +819,8 @@ var MVP = {
 };
 
 var JSL = {
-  bytes_required:function() {
-    return 4;
-  },
+  bytes_required:4,
+
   execute:function(cpu, bytes) {
     cpu.cycle_count+=8;
 
@@ -881,9 +834,8 @@ var JSL = {
 };
 
 var RTL = {
-  bytes_required:function() {
-    return 1;
-  },
+  bytes_required:1,
+
   execute:function(cpu) {
     cpu.cycle_count+=6;
 
@@ -895,9 +847,8 @@ var RTL = {
 };
 
 var JSR = {
-  bytes_required:function() {
-    return 3;
-  },
+  bytes_required:3,
+
   execute:function(cpu, bytes) {
     cpu.cycle_count+=6;
 
@@ -909,9 +860,8 @@ var JSR = {
 };
 
 var JSR_absolute_indexed_x_indirect = {
-  bytes_required:function() {
-    return 3;
-  },
+  bytes_required:3,
+
   execute:function(cpu, bytes) {
     cpu.cycle_count+=8;
 
@@ -936,9 +886,8 @@ var JSR_absolute_indexed_x_indirect = {
 };
 
 var RTS = {
-  bytes_required:function() {
-    return 1;
-  },
+  bytes_required:1,
+
   execute:function(cpu) {
     cpu.cycle_count+=6;
 
@@ -949,9 +898,8 @@ var RTS = {
 };
 
 var PER = {
-  bytes_required:function() {
-    return 3;
-  },
+  bytes_required:3,
+
   execute:function(cpu,bytes) {
     cpu.cycle_count+=6;
 
@@ -962,9 +910,8 @@ var PER = {
 };
 
 var PHK = {
-  bytes_required:function() {
-    return 1;
-  },
+  bytes_required:1,
+
   execute:function(cpu) {
     cpu.cycle_count+=3;
 
@@ -973,9 +920,8 @@ var PHK = {
 };
 
 var PHD = {
-  bytes_required:function() {
-    return 1;
-  },
+  bytes_required:1,
+
   execute:function(cpu) {
     cpu.cycle_count+=4;
 
@@ -985,9 +931,8 @@ var PHD = {
 };
 
 var PLD = {
-  bytes_required:function() {
-    return 1;
-  },
+  bytes_required:1,
+
   execute:function(cpu) {
     cpu.cycle_count+=5;
 
@@ -1002,9 +947,8 @@ var PLD = {
 };
 
 var PHB = {
-  bytes_required:function() {
-    return 1;
-  },
+  bytes_required:1,
+
   execute:function(cpu) {
     cpu.cycle_count+=3;
     cpu.mmu.push_byte(cpu.r.dbr);
@@ -1012,9 +956,8 @@ var PHB = {
 };
 
 var PLB = {
-   bytes_required:function() {
-    return 1;
-  },
+  bytes_required:1,
+
   execute:function(cpu) {
     cpu.cycle_count+=4;
 
@@ -1025,9 +968,8 @@ var PLB = {
 };
 
 var PEA = {
-  bytes_required:function() {
-    return 3;
-  },
+  bytes_required:3,
+
   execute:function(cpu, bytes) {
     cpu.cycle_count+=5;
 
@@ -1037,9 +979,8 @@ var PEA = {
 };
 
 var PEI = {
-  bytes_required:function() {
-    return 2;
-  },
+  bytes_required:2,
+
   execute:function(cpu, bytes) {
     cpu.cycle_count+=6;
 
@@ -1053,9 +994,8 @@ var PEI = {
 };
 
 var PHP = {
-  bytes_required:function() {
-    return 1;
-  },
+  bytes_required:1,
+
   execute:function(cpu) {
     cpu.cycle_count+=3;
 
@@ -1066,9 +1006,8 @@ var PHP = {
 };
 
 var PLP = {
-  bytes_required:function() {
-    return 1;
-  },
+  bytes_required:1,
+
   execute:function(cpu) {
     cpu.cycle_count+=4;
 
@@ -1085,9 +1024,8 @@ var PLP = {
 };
 
 var PHX = {
-  bytes_required:function() {
-    return 1;
-  },
+  bytes_required:1,
+
   execute:function(cpu) {
     cpu.cycle_count+=3;
 
@@ -1103,9 +1041,8 @@ var PHX = {
 };
 
 var PLX = {
-  bytes_required:function() {
-    return 1;
-  },
+  bytes_required:1,
+
   execute:function(cpu) {
     cpu.cycle_count+=4;
 
@@ -1125,9 +1062,8 @@ var PLX = {
 };
 
 var PHY = {
-  bytes_required:function() {
-    return 1;
-  },
+  bytes_required:1,
+
   execute:function(cpu) {
     cpu.cycle_count+=3;
 
@@ -1142,9 +1078,8 @@ var PHY = {
 };
 
 var PLY = {
-  bytes_required:function() {
-    return 1;
-  },
+  bytes_required:1,
+
   execute:function(cpu) {
     cpu.cycle_count+=4;
 
@@ -1164,9 +1099,8 @@ var PLY = {
 };
 
 var PHA = {
-  bytes_required:function() {
-    return 1;
-  },
+  bytes_required:1,
+
   execute:function(cpu) {
     cpu.cycle_count+=3;
 
@@ -1182,9 +1116,8 @@ var PHA = {
 };
 
 var PLA = {
-  bytes_required:function() {
-    return 1;
-  },
+  bytes_required:1,
+
   execute:function(cpu) {
     cpu.cycle_count+=4;
 
@@ -1205,9 +1138,8 @@ var PLA = {
 };
 
 var ROR_accumulator = {
-  bytes_required:function() {
-    return 1;
-  },
+  bytes_required:1,
+
   execute:function(cpu) {
     cpu.cycle_count+=2;
 
@@ -1231,9 +1163,8 @@ var ROR_accumulator = {
 };
 
 var ROR_absolute = {
-  bytes_required:function() {
-    return 3;
-  },
+  bytes_required:3,
+
   execute:function(cpu,bytes) {
     cpu.cycle_count+=6;
 
@@ -1265,9 +1196,8 @@ var ROR_absolute = {
 };
 
 var ROR_direct_page = {
-  bytes_required:function() {
-    return 2;
-  },
+  bytes_required:2,
+
   execute:function(cpu,bytes) {
     cpu.cycle_count+=5;
 
@@ -1308,9 +1238,8 @@ var ROR_direct_page_indexed_x =
   new cpu_lib.addressing.Direct_page_indexed(ROR_direct_page, 'x');
 
 var ROL_accumulator = {
-  bytes_required:function() {
-    return 1;
-  },
+  bytes_required:1,
+
   execute:function(cpu) {
     cpu.cycle_count+=2;
 
@@ -1334,9 +1263,8 @@ var ROL_accumulator = {
 };
 
 var ROL_absolute = {
-  bytes_required:function() {
-    return 3;
-  },
+  bytes_required:3,
+
   execute:function(cpu, bytes) {
     cpu.cycle_count+=6;
 
@@ -1368,9 +1296,8 @@ var ROL_absolute = {
 };
 
 var ROL_direct_page = {
-  bytes_required:function() {
-    return 2;
-  },
+  bytes_required:2,
+
   execute:function(cpu, bytes) {
     cpu.cycle_count+=5;
 
@@ -1411,9 +1338,8 @@ var ROL_direct_page_indexed_x =
   new cpu_lib.addressing.Direct_page_indexed(ROL_direct_page, 'x');
 
 var ASL_accumulator = {
-  bytes_required:function() {
-    return 1;
-  },
+  bytes_required:1,
+
   execute:function(cpu) {
     cpu.cycle_count+=2;
 
@@ -1434,9 +1360,8 @@ var ASL_accumulator = {
 };
 
 var ASL_absolute = {
-  bytes_required:function() {
-    return 3;
-  },
+  bytes_required:3,
+
   execute:function(cpu, bytes) {
     cpu.cycle_count+=6;
 
@@ -1464,9 +1389,8 @@ var ASL_absolute = {
 };
 
 var ASL_direct_page = {
-  bytes_required:function() {
-    return 2;
-  },
+  bytes_required:2,
+
   execute:function(cpu,bytes) {
     cpu.cycle_count+=5;
 
@@ -1504,9 +1428,8 @@ var ASL_direct_page_indexed_x =
   new cpu_lib.addressing.Direct_page_indexed(ASL_direct_page, 'x');
 
 var LSR_accumulator = {
-  bytes_required:function() {
-    return 1;
-  },
+  bytes_required:1,
+
   execute:function(cpu) {
     cpu.cycle_count+=2;
 
@@ -1519,9 +1442,8 @@ var LSR_accumulator = {
 };
 
 var LSR_absolute = {
-  bytes_required:function() {
-    return 3;
-  },
+  bytes_required:3,
+
   execute:function(cpu, bytes) {
     cpu.cycle_count+=6;
 
@@ -1547,9 +1469,8 @@ var LSR_absolute = {
 };
 
 var LSR_direct_page = {
-  bytes_required:function() {
-    return 2;
-  },
+  bytes_required:2,
+
   execute:function(cpu, bytes) {
     cpu.cycle_count+=5;
 
@@ -2258,9 +2179,8 @@ var BNE = new cpu_lib.branch.Branch('z', false);
 var BRA = new cpu_lib.branch.Branch();
 
 var BRL = {
-  bytes_required:function() {
-    return 3;
-  },
+  bytes_required:3,
+
   execute:function(cpu, bytes) {
     cpu.cycle_count+=4;
 
@@ -2279,9 +2199,8 @@ var BRL = {
 
 
 var JMP_absolute_indirect = {
-  bytes_required:function() {
-    return 3;
-  },
+  bytes_required:3,
+
   execute:function(cpu, bytes) {
     cpu.cycle_count+=5;
 
@@ -2290,9 +2209,8 @@ var JMP_absolute_indirect = {
 };
 
 var JMP_absolute_long = {
-  bytes_required:function() {
-    return 4;
-  },
+  bytes_required:4,
+
   execute:function(cpu, bytes) {
     cpu.cycle_count+=4;
 
@@ -2302,9 +2220,8 @@ var JMP_absolute_long = {
 };
 
 var JMP_absolute_indirect_long = {
-  bytes_required:function() {
-    return 3;
-  },
+  bytes_required:3,
+
   execute:function(cpu, bytes) {
     cpu.cycle_count+=6;
 
@@ -2315,9 +2232,8 @@ var JMP_absolute_indirect_long = {
 };
 
 var JMP_absolute_indexed_x_indirect = {
-  bytes_required:function() {
-    return 3;
-  },
+  bytes_required:3,
+
   execute:function(cpu, bytes) {
     cpu.cycle_count+=6;
 
@@ -2342,9 +2258,8 @@ var JMP_absolute_indexed_x_indirect = {
 };
 
 var JMP_absolute = {
-  bytes_required:function() {
-    return 3;
-  },
+  bytes_required:3,
+
   execute:function(cpu, bytes) {
     cpu.cycle_count+=3;
 
@@ -2378,9 +2293,8 @@ var TYA = {
 };
 
 var TAY = {
-  bytes_required:function() {
-    return 1;
-  },
+  bytes_required:1,
+
   execute:function(cpu) {
     cpu.cycle_count+=2;
     if(cpu.p.e||cpu.p.m) {
@@ -2412,9 +2326,8 @@ var TAY = {
 
 
 var TXA = {
-  bytes_required:function() {
-    return 1;
-  },
+  bytes_required:1,
+
   execute:function(cpu) {
     cpu.cycle_count+=2;
     if(cpu.p.e||cpu.p.m) {
@@ -2437,9 +2350,8 @@ var TXA = {
 };
 
 var TAX = {
-  bytes_required:function() {
-    return 1;
-  },
+  bytes_required:1,
+
   execute:function(cpu) {
     cpu.cycle_count+=2;
     if(cpu.p.e||cpu.p.m) {
@@ -2469,9 +2381,8 @@ var TAX = {
 };
 
 var TXY = {
-  bytes_required:function() {
-    return 1;
-  },
+  bytes_required:1,
+
   execute:function(cpu) {
     cpu.cycle_count+=2;
     cpu.r.y = cpu.r.x;
@@ -2486,9 +2397,8 @@ var TXY = {
 };
 
 var TYX = {
-  bytes_required:function() {
-    return 1;
-  },
+  bytes_required:1,
+
   execute:function(cpu) {
     cpu.cycle_count+=2;
     cpu.r.x = cpu.r.y;
@@ -2503,9 +2413,8 @@ var TYX = {
 };
 
 var TCD = {
-  bytes_required:function() {
-    return 1;
-  },
+  bytes_required:1,
+
   execute:function(cpu) {
     cpu.cycle_count+=2;
 
@@ -2523,9 +2432,8 @@ var TCD = {
 };
 
 var TDC = {
-  bytes_required:function() {
-    return 1;
-  },
+  bytes_required:1,
+
   execute:function(cpu) {
     cpu.cycle_count+=2;
 
@@ -2544,9 +2452,8 @@ var TDC = {
 };
 
 var TCS = {
-  bytes_required:function() {
-    return 1;
-  },
+  bytes_required:1,
+
   execute:function(cpu) {
     cpu.cycle_count+=2;
 
@@ -2559,9 +2466,8 @@ var TCS = {
 };
 
 var TSC = {
-  bytes_required:function() {
-    return 1;
-  },
+  bytes_required:1,
+
   execute:function(cpu) {
     cpu.cycle_count+=2;
 
@@ -2588,9 +2494,8 @@ var TSC = {
 };
 
 var STZ_absolute = {
-  bytes_required: function() {
-    return 3;
-  },
+  bytes_required:3,
+
   execute: function(cpu, bytes) {
     cpu.cycle_count+=4;
 
@@ -2606,9 +2511,8 @@ var STZ_absolute = {
 };
 
 var STZ_direct_page = {
-  bytes_required: function() {
-    return 2;
-  },
+  bytes_required:2,
+
   execute: function(cpu, bytes) {
     cpu.cycle_count+=3;
 
@@ -2627,9 +2531,8 @@ var STZ_direct_page = {
 };
 
 var STZ_absolute_indexed_x = {
-  bytes_required: function() {
-    return 3;
-  },
+  bytes_required:3,
+
   execute: function(cpu, bytes) {
     cpu.cycle_count+=5;
 
@@ -2645,9 +2548,8 @@ var STZ_absolute_indexed_x = {
 };
 
 var STZ_direct_page_indexed_x = {
-  bytes_required: function() {
-    return 2;
-  },
+  bytes_required:2,
+
   execute: function(cpu, bytes) {
     cpu.cycle_count+=4;
 
@@ -2678,9 +2580,8 @@ var STZ_direct_page_indexed_x = {
 };
 
 var STA_direct_page_indirect = {
-  bytes_required:function() {
-    return 2;
-  },
+  bytes_required:2,
+
   execute:function(cpu, bytes) {
     cpu.cycle_count+=5;
 
@@ -2700,9 +2601,8 @@ var STA_direct_page_indirect = {
 };
 
 var STA_direct_page_indirect_long = {
-  bytes_required:function() {
-    return 2;
-  },
+  bytes_required:2,
+
   execute:function(cpu, bytes) {
     cpu.cycle_count+=6;
 
@@ -2724,9 +2624,8 @@ var STA_direct_page_indirect_long = {
 };
 
 var STA_direct_page_indirect_long_indexed_y = {
-  bytes_required:function() {
-    return 2;
-  },
+  bytes_required:2,
+
   execute:function(cpu, bytes) {
     cpu.cycle_count+=6;
 
@@ -2756,9 +2655,8 @@ var STA_direct_page_indirect_long_indexed_y = {
 };
 
 var STA_direct_page_indirect_indexed_y = {
-  bytes_required:function() {
-    return 2;
-  },
+  bytes_required:2,
+
   execute:function(cpu, bytes) {
     cpu.cycle_count+=6;
 
@@ -2778,9 +2676,8 @@ var STA_direct_page_indirect_indexed_y = {
 };
 
 var STA_stack_relative = {
-  bytes_required:function() {
-    return 2;
-  },
+  bytes_required:2,
+
   execute:function(cpu, bytes) {
     cpu.cycle_count+=4;
 
@@ -2799,9 +2696,8 @@ var STA_stack_relative = {
 };
 
 var STA_stack_relative_indirect_indexed_y = {
-  bytes_required:function() {
-    return 2;
-  },
+  bytes_required:2,
+
   execute:function(cpu, bytes) {
     cpu.cycle_count+=7;
 
@@ -2855,9 +2751,8 @@ var STA_stack_relative_indirect_indexed_y = {
 };
 
 var NOP = {
-  bytes_required:function() {
-    return 1;
-  },
+  bytes_required:1,
+
   execute:function(cpu) {
     cpu.cycle_count+=2;
   }
@@ -2935,9 +2830,8 @@ var INC_direct_page_indexed_x =
   new cpu_lib.addressing.Direct_page_indexed(INC_direct_page, 'x');
 
 var STA_direct_page_indexed_x = {
-  bytes_required: function() {
-    return 2;
-  },
+  bytes_required:2,
+
   execute: function(cpu, bytes) {
     cpu.cycle_count+=4;
 
@@ -2956,9 +2850,8 @@ var STA_direct_page_indexed_x = {
 };
 
 var STA_direct_page_indexed_x_indirect = {
-  bytes_required:function() {
-    return 2;
-  },
+  bytes_required:2,
+
   execute:function(cpu, bytes) {
     cpu.cycle_count+=6;
 
@@ -3000,9 +2893,8 @@ var STA_direct_page_indexed_x_indirect = {
 };
 
 var STA_direct_page = {
-  bytes_required: function() {
-    return 2;
-  },
+  bytes_required:2,
+
   execute: function(cpu, bytes) {
     cpu.cycle_count+=3;
 
@@ -3021,9 +2913,8 @@ var STA_direct_page = {
 };
 
 var STA_absolute_indexed_x = {
-  bytes_required: function() {
-    return 3;
-  },
+  bytes_required:3,
+
   execute: function(cpu, bytes) {
     cpu.cycle_count+=5;
 
@@ -3039,9 +2930,8 @@ var STA_absolute_indexed_x = {
 };
 
 var STA_absolute_indexed_y = {
-  bytes_required: function() {
-    return 3;
-  },
+  bytes_required:3,
+
   execute: function(cpu, bytes) {
     cpu.cycle_count+=5;
 
@@ -3057,9 +2947,8 @@ var STA_absolute_indexed_y = {
 };
 
 var STY_direct_page_indexed_x = {
-  bytes_required: function() {
-    return 2;
-  },
+  bytes_required:2,
+
   execute: function(cpu, bytes) {
     cpu.cycle_count+=4;
 
@@ -3078,9 +2967,8 @@ var STY_direct_page_indexed_x = {
 };
 
 var STY_direct_page = {
-  bytes_required: function() {
-    return 2;
-  },
+  bytes_required:2,
+
   execute: function(cpu, bytes) {
     cpu.cycle_count+=3;
 
@@ -3099,9 +2987,8 @@ var STY_direct_page = {
 };
 
 var STY_absolute = {
-  bytes_required: function() {
-    return 3;
-  },
+  bytes_required:3,
+
   execute: function(cpu, bytes) {
     cpu.cycle_count+=4;
 
@@ -3117,9 +3004,8 @@ var STY_absolute = {
 };
 
 var STX_direct_page_indexed_y = {
-  bytes_required: function() {
-    return 2;
-  },
+  bytes_required:2,
+
   execute: function(cpu, bytes) {
     cpu.cycle_count+=4;
 
@@ -3138,9 +3024,8 @@ var STX_direct_page_indexed_y = {
 };
 
 var STX_direct_page = {
-  bytes_required: function() {
-    return 2;
-  },
+  bytes_required:2,
+
   execute: function(cpu, bytes) {
     cpu.cycle_count+=3;
 
@@ -3159,9 +3044,8 @@ var STX_direct_page = {
 };
 
 var STX_absolute = {
-  bytes_required: function() {
-    return 3;
-  },
+  bytes_required:3,
+
   execute: function(cpu, bytes) {
     cpu.cycle_count+=4;
 
@@ -3177,9 +3061,8 @@ var STX_absolute = {
 };
 
 var STA_absolute_long = {
-  bytes_required: function() {
-    return 4;
-  },
+  bytes_required:4,
+
   execute: function(cpu, bytes) {
     cpu.cycle_count+=5;
 
@@ -3195,9 +3078,8 @@ var STA_absolute_long = {
 };
 
 var STA_absolute_long_indexed_x = {
-  bytes_required: function() {
-    return 4;
-  },
+  bytes_required:4,
+
   execute: function(cpu, bytes) {
     cpu.cycle_count+=5;
 
@@ -3222,9 +3104,8 @@ var STA_absolute_long_indexed_x = {
 };
 
 var STA_absolute = {
-  bytes_required: function() {
-    return 3;
-  },
+  bytes_required:3,
+
   execute: function(cpu, bytes) {
     cpu.cycle_count+=4;
 
@@ -3340,7 +3221,8 @@ var SEP = new cpu_lib.r.p.Set_p(1);
 var REP = new cpu_lib.r.p.Set_p(0);
 
 var XCE = {
-  bytes_required: function() { return 1; },
+  bytes_required:1,
+
   execute: function(cpu) {
     cpu.cycle_count+=2;
 
@@ -3377,9 +3259,8 @@ var SED = new cpu_lib.r.p.Flag_set('d', 1);
 var CLV = new cpu_lib.r.p.Flag_set('v', 0);
 
 var XBA = {
-  bytes_required:function() {
-    return 1;
-  },
+  bytes_required:1,
+
   execute:function(cpu) {
     cpu.cycle_count+=3;
 
@@ -3879,7 +3760,14 @@ window.CPU_65816 = function() {
       return;
     }
     var operation = this.opcode_map[b];
-    var bytes_required = operation.bytes_required(this);
+
+    // bytes_required can either be a number, or a function that resolves
+    // to a number using some aspect of the cpu.
+    var bytes_required = operation.bytes_required;
+    if(typeof bytes_required === 'function') {
+      bytes_required = bytes_required(this);
+    }
+
     if(bytes_required===1) {
       operation.execute(this);
     } else {
